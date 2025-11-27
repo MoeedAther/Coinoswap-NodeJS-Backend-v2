@@ -1,0 +1,15 @@
+# ignore .env file
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# ignore all node_modules
+node_modules/
+
+# ignore all log files
+*.log
+logs/
+app.log
+/generated/prisma

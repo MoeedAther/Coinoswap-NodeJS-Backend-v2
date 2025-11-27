@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model sessions {
+  session_id      String  @id @db.VarChar(128)
+  expiration_time Int     @db.UnsignedInt
+  data            String? @db.MediumText
+}
+
+model buy_crypto {
+  id             Int      @id @default(autoincrement())
+  standardTicker String?  @db.VarChar(255)
+  ticker         String   @db.VarChar(50)
+  name           String   @db.VarChar(100)
+  network        String?  @db.VarChar(50)
+  image          String?  @db.LongText
+  buyPartner     String?  @db.VarChar(255)
+  mappedPartners String?  @db.LongText
+  data           String?  @db.LongText
+  isFiat         Boolean  @default(false)
+  isApproved     Boolean  @default(true)
+  isStandard     Boolean? @default(false)
+}
+
+model swap_crypto {
+  id              Int      @id @default(autoincrement())
+  standardTicker  String   @db.VarChar(50)
+  name            String   @db.VarChar(100)
+  network         String?  @db.VarChar(50)
+  shortName       String?  @db.VarChar(100)
+  image           String?  @db.LongText
+  swapPartner     String?  @db.VarChar(255)
+  mappedPartners  String?  @db.LongText
+  data            String?  @db.LongText
+  coinType        String   @default("other") @db.VarChar(50)
+  requiresExtraId Boolean  @default(false)
+  isApproved      Boolean  @default(true)
+  isStandard      Boolean? @default(false)
+}
+
+model admin {
+  id               Int      @id @default(autoincrement())
+  email            String   @unique @db.VarChar(255)
+  password         String   @db.VarChar(255)
+  name             String   @db.VarChar(255)
+  twoFactorSecret  String?  @db.VarChar(255)
+  twoFactorEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model settings {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(191)
+  value     String?  @db.LongText
+  type      String   @default("string") @db.VarChar(50)
+  updated_at DateTime @updatedAt @default(now())
+  created_at DateTime @default(now())
+}
+
+model swaps {
+  id                Int       @id @default(autoincrement())
+  transactionId     String?   @db.LongText
+  swapPartner       String?   @db.VarChar(100)
+  sellCoin          String?   @db.LongText
+  buyCoin           String?   @db.LongText
+  sellAmount        String?   @db.VarChar(255)
+  getAmount         String?   @db.VarChar(255)
+  status            String?   @db.VarChar(50)
+  depositExtraId    String?   @db.LongText
+  refundExtraid     String?   @db.LongText
+  recipientExtraId  String?   @db.LongText
+  expiryTime        DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt @default(now())
+}

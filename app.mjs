@@ -1,0 +1,1109 @@
+// Suppress punycode deprecation warning
+process.on("warning", (warning) => {
+  if (
+    warning.name === "DeprecationWarning" &&
+    warning.message.includes("punycode")
+  ) {
+    return; // Suppress punycode deprecation warnings
+  }
+  console.warn("Process Warning:", warning);
+});
+
+import express from "express";
+import router from "./routes/web.js";
+import dotenv from "dotenv";
+import { connectDB, db } from "./database/connectdb.js";
+import session from "express-session";
+import expressMySQLSession from "express-mysql-session";
+import { updateTransactionStatus } from "./cron/transactionStatusUpdateCron.js";
+
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT;
+
+//Connection to Database
+try {
+  connectDB();
+} catch (error) {
+  console.error("Database connection failed:", error);
+}
+
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+const MySQLStore = expressMySQLSession(session);
+
+var sessionStore = new MySQLStore(
+  {
+    expiration: 24 * 60 * 60 * 1000,
+    clearExpired: true,
+    checkExpirationInterval: 15 * 60 * 1000, // Check for expired sessions every 15 minutes
+    createDatabaseTable: true,
+    schema: {
+      tableName: "sessions",
+      columnNames: {
+        session_id: "session_id",
+        expires: "expiration_time",
+        data: "data",
+      },
+    },
+  },
+  db
+);
+
+app.use(
+  session({
+    name: "sessionCoinoSwap",
+    secret: "kjbhidehuhiru374888ync8y84y785cy74y8cy58848yb54bb857y84",
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false, // Only create session when something is stored
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
+
+//Loading Routes
+app.use("/api", router);
+
+// API Tester UI Route
+app.get("/api-tester", (req, res) => {
+  res.send(getApiTesterHTML());
+});
+
+function getApiTesterHTML() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Tester - Coinoswap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .header {
+            background: white;
+            color: #333;
+            padding: 40px;
+            text-align: center;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        .base-url {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .base-url strong {
+            color: #667eea;
+        }
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .api-group-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        .api-group-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+        .api-group-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        .api-group-header h2 {
+            font-size: 1.5em;
+            margin-bottom: 8px;
+        }
+        .api-group-header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+        .api-list {
+            padding: 20px;
+            flex-grow: 1;
+        }
+        .api-item {
+            margin-bottom: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        .api-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+        }
+        .api-item-header {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .api-item-header:hover {
+            background: #e9ecef;
+        }
+        .api-item-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 0.95em;
+            flex-grow: 1;
+        }
+        .method-badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .method-get {
+            background: #28a745;
+            color: white;
+        }
+        .method-post {
+            background: #007bff;
+            color: white;
+        }
+        .method-put {
+            background: #ffc107;
+            color: #333;
+        }
+        .method-delete {
+            background: #dc3545;
+            color: white;
+        }
+        .api-item-body {
+            padding: 15px;
+            display: none;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        .api-item-body.expanded {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            min-height: 80px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+        }
+        .form-group small {
+            color: #666;
+            font-size: 0.8em;
+            display: block;
+            margin-top: 3px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .response-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+        .response-section h4 {
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.9em;
+        }
+        .response-code {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.8em;
+        }
+        .code-200, .code-201 {
+            background: #28a745;
+            color: white;
+        }
+        .code-error {
+            background: #dc3545;
+            color: white;
+        }
+        .response-body {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75em;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .section-title {
+            color: white;
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        @media (max-width: 768px) {
+            .api-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 API Tester</h1>
+            <p>Test Admin, Buy, and Swap Controller APIs</p>
+        </div>
+
+        <div class="base-url">
+            <strong>Base URL:</strong> <span id="baseUrl">/api</span>
+        </div>
+
+        <!-- Admin APIs Section -->
+        <h2 class="section-title">👤 Admin APIs</h2>
+        <div class="api-grid">
+
+            <!-- Authentication Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>🔐 Authentication</h2>
+                    <p>Register, login, and session management</p>
+                </div>
+                <div class="api-list">
+                    <!-- Register Admin -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Register Admin</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/register', 'POST')">
+                                <div class="form-group">
+                                    <label>Email *</label>
+                                    <input type="email" name="email" value="admin@example.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Password *</label>
+                                    <input type="password" name="password" value="Admin@123" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Name *</label>
+                                    <input type="text" name="name" value="Admin User" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Login -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Login</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/login', 'POST')">
+                                <div class="form-group">
+                                    <label>Email *</label>
+                                    <input type="email" name="email" value="admin@coinoswap.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Password *</label>
+                                    <input type="password" name="password" value="Admin@123" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>2FA Code (optional)</label>
+                                    <input type="text" name="twoFactorCode" placeholder="123456">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Logout -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Logout</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/logout', 'POST')">
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Get Session -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Get Session</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/session', 'GET')">
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Change Password -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Change Password</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/change-password', 'POST')">
+                                <div class="form-group">
+                                    <label>Current Password *</label>
+                                    <input type="password" name="currentPassword" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>New Password *</label>
+                                    <input type="password" name="newPassword" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>2FA Code (if enabled)</label>
+                                    <input type="text" name="twoFactorCode" placeholder="123456">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2FA Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>🔒 Two-Factor Auth</h2>
+                    <p>Enable, verify, and disable 2FA</p>
+                </div>
+                <div class="api-list">
+                    <!-- Enable 2FA -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Enable 2FA</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/2fa/enable', 'POST')">
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Verify 2FA -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Verify 2FA</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/2fa/verify', 'POST')">
+                                <div class="form-group">
+                                    <label>2FA Code *</label>
+                                    <input type="text" name="twoFactorCode" placeholder="123456" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Disable 2FA -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Disable 2FA</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/2fa/disable', 'POST')">
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>⚙️ Settings</h2>
+                    <p>Manage application settings</p>
+                </div>
+                <div class="api-list">
+                    <!-- Get All Settings -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Get All Settings</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/settings', 'GET')">
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Get Setting by Key -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Get Setting by Key</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/settings/:key', 'GET')">
+                                <div class="form-group">
+                                    <label>Key *</label>
+                                    <input type="text" name="key" placeholder="setting_key" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Upsert Setting -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Upsert Setting</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/settings', 'POST')">
+                                <div class="form-group">
+                                    <label>Key *</label>
+                                    <input type="text" name="key" placeholder="setting_key" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Value *</label>
+                                    <textarea name="value" required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Type</label>
+                                    <select name="type">
+                                        <option value="string">string</option>
+                                        <option value="number">number</option>
+                                        <option value="boolean">boolean</option>
+                                        <option value="json">json</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Delete Setting -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Delete Setting</span>
+                            <span class="method-badge method-delete">DELETE</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/settings/:key', 'DELETE')">
+                                <div class="form-group">
+                                    <label>Key *</label>
+                                    <input type="text" name="key" placeholder="setting_key" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partners Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>🤝 Partners</h2>
+                    <p>Manage exchange partners</p>
+                </div>
+                <div class="api-list">
+                    <!-- Get Partners -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Get Partners</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/settings/partners', 'GET')">
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Update Partners -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Update Partners</span>
+                            <span class="method-badge method-put">PUT</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/settings/partners', 'PUT')">
+                                <div class="form-group">
+                                    <label>Partners JSON *</label>
+                                    <textarea name="partners" required placeholder='{"partner1": true, "partner2": false}'></textarea>
+                                    <small>JSON object with partner names as keys and boolean values</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Toggle Partner -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Toggle Partner</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/admin/settings/partners/toggle', 'POST')">
+                                <div class="form-group">
+                                    <label>Partner Name *</label>
+                                    <input type="text" name="partner" placeholder="changelly" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Buy Controller APIs Section -->
+        <h2 class="section-title">💰 Buy Controller APIs</h2>
+        <div class="api-grid">
+
+            <!-- Buy Coin Management Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>🪙 Coin Management</h2>
+                    <p>Update, search, and manage buy coins</p>
+                </div>
+                <div class="api-list">
+                    <!-- Update Coins -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Update Coins</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/buy/update-coins', 'GET')">
+                                <small>Fetches and updates coins from buy partners (Finchpay, Guardarian)</small>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Add/Delete Coin -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Add/Delete Coin</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/buy/add-delete-coins', 'POST')">
+                                <div class="form-group">
+                                    <label>Action *</label>
+                                    <select name="action" required>
+                                        <option value="add">Add</option>
+                                        <option value="delete">Delete</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Standard Coin ID *</label>
+                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Unstandard Coin ID (for add)</label>
+                                    <input type="number" name="unstandardCoinId" placeholder="2">
+                                </div>
+                                <div class="form-group">
+                                    <label>Partner Name (for delete)</label>
+                                    <input type="text" name="partnerName" placeholder="finchpay">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Search Coins -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Search Coins</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/buy/search-coins', 'GET')">
+                                <div class="form-group">
+                                    <label>Ticker *</label>
+                                    <input type="text" name="ticker" placeholder="BTC" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Is Fiat *</label>
+                                    <select name="isFiat" required>
+                                        <option value="0">No (0)</option>
+                                        <option value="1">Yes (1)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Is Standard *</label>
+                                    <select name="isStandard" required>
+                                        <option value="0">No (0)</option>
+                                        <option value="1">Yes (1)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Page</label>
+                                    <input type="number" name="page" value="1" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Limit</label>
+                                    <input type="number" name="limit" value="10" min="1">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Swap Controller APIs Section -->
+        <h2 class="section-title">🔄 Swap Controller APIs</h2>
+        <div class="api-grid">
+
+            <!-- Swap Coin Management Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>🪙 Coin Management</h2>
+                    <p>Update, search, and manage swap coins</p>
+                </div>
+                <div class="api-list">
+                    <!-- Update Coins -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Update Coins</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/update-coins', 'GET')">
+                                <small>Fetches and updates coins from swap partners (Changelly, ChangeNow, etc.)</small>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Add/Delete Coin -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Add/Delete Coin</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/add-delete-coins', 'POST')">
+                                <div class="form-group">
+                                    <label>Action *</label>
+                                    <select name="action" required>
+                                        <option value="add">Add</option>
+                                        <option value="delete">Delete</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Standard Coin ID *</label>
+                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Unstandard Coin ID (for add)</label>
+                                    <input type="number" name="unstandardCoinId" placeholder="2">
+                                </div>
+                                <div class="form-group">
+                                    <label>Partner Name (for delete)</label>
+                                    <input type="text" name="partnerName" placeholder="changelly">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Search Coins -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Search Coins</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/search-coins', 'GET')">
+                                <div class="form-group">
+                                    <label>Ticker *</label>
+                                    <input type="text" name="ticker" placeholder="btc" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Is Standard *</label>
+                                    <select name="isStandard" required>
+                                        <option value="0">No (0)</option>
+                                        <option value="1">Yes (1)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Page</label>
+                                    <input type="number" name="page" value="1" min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>Limit</label>
+                                    <input type="number" name="limit" value="10" min="1">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Standardization Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>⭐ Standardization</h2>
+                    <p>Standardize and manage standard coins</p>
+                </div>
+                <div class="api-list">
+                    <!-- Standardize Coin -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Standardize Coin</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/standardize-coin', 'POST')">
+                                <div class="form-group">
+                                    <label>Coin IDs (JSON Array) *</label>
+                                    <textarea name="coinIds" required placeholder='[1, 2, 3]'></textarea>
+                                    <small>Array of coin IDs to standardize together</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Destandardize Coin -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Destandardize Coin</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/destandardize-coin', 'POST')">
+                                <div class="form-group">
+                                    <label>Standard Coin ID *</label>
+                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Get Standard Coin -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Get Standard Coin</span>
+                            <span class="method-badge method-get">GET</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/get-standard-coin', 'GET')">
+                                <div class="form-group">
+                                    <label>Standard Coin ID *</label>
+                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Update Standard Coin -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Update Standard Coin</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/update-standard-coin', 'POST')">
+                                <div class="form-group">
+                                    <label>Standard Coin ID *</label>
+                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Short Name</label>
+                                    <input type="text" name="shortName" placeholder="Bitcoin">
+                                </div>
+                                <div class="form-group">
+                                    <label>Coin Type</label>
+                                    <select name="coinType">
+                                        <option value="">Select type</option>
+                                        <option value="stable">Stable</option>
+                                        <option value="stable&popular">Stable & Popular</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Image URL</label>
+                                    <input type="text" name="image" placeholder="https://...">
+                                </div>
+                                <div class="form-group">
+                                    <label>Mapped Partners (JSON)</label>
+                                    <textarea name="mappedPartners" placeholder='[{"swapPartner": "changelly", "payInNotification": null}]'></textarea>
+                                    <small>Optional: Update mapped partners array</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = window.location.origin;
+        document.getElementById('baseUrl').textContent = baseUrl + '/api';
+
+        function toggleApi(header) {
+            const body = header.nextElementSibling;
+            body.classList.toggle('expanded');
+        }
+
+        async function testApi(event, endpoint, method) {
+            event.preventDefault();
+            const form = event.target;
+            const responseSection = form.querySelector('.response-section');
+            const button = form.querySelector('button[type="submit"]');
+            const originalText = button.textContent;
+
+            button.disabled = true;
+            button.innerHTML = '<span class="loading"></span> Sending...';
+
+            let url = baseUrl + endpoint;
+            const formData = new FormData(form);
+            const params = new URLSearchParams();
+            const body = {};
+
+            if (endpoint.includes(':key')) {
+                const key = formData.get('key');
+                if (key) url = url.replace(':key', key);
+            }
+
+            for (const [key, value] of formData.entries()) {
+                if (key === 'key' && endpoint.includes(':key')) continue;
+
+                if (method === 'GET') {
+                    params.append(key, value);
+                } else {
+                    if (key === 'coinIds' || key === 'partners' || key === 'mappedPartners') {
+                        try {
+                            body[key] = JSON.parse(value);
+                        } catch (e) {
+                            body[key] = value;
+                        }
+                    } else {
+                        body[key] = value;
+                    }
+                }
+            }
+
+            if (method === 'GET' && params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            try {
+                const options = {
+                    method: method,
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (method !== 'GET' && Object.keys(body).length > 0) {
+                    options.body = JSON.stringify(body);
+                }
+
+                const response = await fetch(url, options);
+                const data = await response.json();
+                const statusCode = response.status;
+
+                responseSection.style.display = 'block';
+                responseSection.innerHTML = \`
+                    <h4>Response <span class="response-code \${statusCode >= 200 && statusCode < 300 ? 'code-200' : 'code-error'}">\${statusCode}</span></h4>
+                    <div class="response-body">\${JSON.stringify(data, null, 2)}</div>
+                \`;
+
+            } catch (error) {
+                responseSection.style.display = 'block';
+                responseSection.innerHTML = \`
+                    <h4>Error</h4>
+                    <div class="response-body" style="color: #ff6b6b;">\${error.message}</div>
+                \`;
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+    </script>
+</body>
+</html>`;
+}
+
+// Initialize cron jobs
+updateTransactionStatus();
+
+// Start server with error handlings
+const server = app
+  .listen(port, () => {
+    console.log(`Server listening at http://localhost:${port}`);
+  })
+  .on("error", (error) => {
+    console.error("Server startup failed:", error);
+    process.exit(1);
+  });
+
+// Graceful shutdown handling
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received, shutting down gracefully");
+  server.close(() => {
+    console.log("Process terminated");
+    process.exit(0);
+  });
+});
+
+process.on("SIGINT", () => {
+  console.log("SIGINT received, shutting down gracefully");
+  server.close(() => {
+    console.log("Process terminated");
+    process.exit(0);
+  });
+});
