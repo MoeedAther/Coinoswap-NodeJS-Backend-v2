@@ -366,24 +366,34 @@ Add a partner to a standard coin's mapped partners or remove a partner from it.
 
 ## 4. Search Coins API
 
-Search for coins by ticker with optional filters for fiat/crypto and standard/non-standard.
+Search for coins by ticker or network with filters for fiat/crypto and standard/non-standard.
 
 **Endpoint:** `GET /api/buy/search-coins`
 
 **Authentication:** Not Required
 
 **Query Parameters:**
-- `ticker`: Required - Search term for coin ticker (partial match supported)
-- `isFiat`: Optional - Filter by fiat/crypto ("true" or "false")
-- `isStandard`: Optional - Filter by standard/non-standard ("true" or "false")
+- `searchTerm`: Optional - Search term for coin ticker or network (partial match supported). If not provided, returns all coins matching other filters
+- `isFiat`: Required - Filter by fiat/crypto ("1" for fiat, "0" for crypto)
+- `isStandard`: Required - Filter by standard/non-standard ("1" for standard, "0" for non-standard)
 - `page`: Optional - Page number for pagination (default: 1)
 - `limit`: Optional - Number of results per page (default: 10)
 
+**Search Behavior:**
+- Searches in both `ticker` and `network` columns
+- Case-insensitive partial matching
+- Results are sorted with priority:
+  1. Exact ticker match
+  2. Exact network match
+  3. Ticker starts with search term
+  4. Alphabetical order
+
 **Example Requests:**
 ```
-GET /api/buy/search-coins?ticker=btc
-GET /api/buy/search-coins?ticker=usd&isFiat=true
-GET /api/buy/search-coins?ticker=eth&isStandard=true&page=2&limit=20
+GET /api/buy/search-coins?searchTerm=btc&isFiat=0&isStandard=1
+GET /api/buy/search-coins?searchTerm=usd&isFiat=1&isStandard=1
+GET /api/buy/search-coins?searchTerm=ethereum&isFiat=0&isStandard=0&page=2&limit=20
+GET /api/buy/search-coins?isFiat=0&isStandard=1 (returns all standard crypto coins)
 ```
 
 **Success Response (200):**
@@ -441,11 +451,19 @@ GET /api/buy/search-coins?ticker=eth&isStandard=true&page=2&limit=20
 
 **Error Responses:**
 
-**400 - Validation Error:**
+**400 - Validation Error (Missing isFiat):**
 ```json
 {
   "success": false,
-  "message": "ticker parameter is required for search"
+  "message": "isFiat parameter is required for search"
+}
+```
+
+**400 - Validation Error (Missing isStandard):**
+```json
+{
+  "success": false,
+  "message": "isStandard parameter is required for search"
 }
 ```
 
@@ -460,8 +478,10 @@ GET /api/buy/search-coins?ticker=eth&isStandard=true&page=2&limit=20
 
 **Notes:**
 - Search is case-insensitive
-- Ticker search uses partial matching (LIKE '%ticker%')
-- Results are ordered by `id` in ascending order
+- Searches both ticker and network columns using OR condition
+- If no search term provided, returns all coins matching isFiat and isStandard filters
+- Partial matching supported (e.g., "btc" matches "BTC", "WBTC")
+- Results prioritize exact matches and then alphabetical order
 - Standard coins have `buyPartner: null` and populated `mappedPartners`
 - Non-standard coins have specific `buyPartner` and raw `data` field
 

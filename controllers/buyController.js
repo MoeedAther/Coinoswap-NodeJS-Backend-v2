@@ -697,16 +697,9 @@ class buyController {
   // This controller is responsible for searching of standard and unstandard coins
   static searchCoins = async (req, res) => {
     try {
-      const { ticker, isFiat, isStandard, page = 1, limit = 10 } = req.query;
+      const { searchTerm, isFiat, isStandard, page = 1, limit = 10 } = req.query;
 
       // ---------- VALIDATE INPUT ----------
-      if (!ticker || ticker.trim() === "") {
-        return res.status(400).json({
-          success: false,
-          message: "ticker parameter is required for search",
-        });
-      }
-
       if (isFiat === undefined || isFiat === null || isFiat === "") {
         return res.status(400).json({
           success: false,
@@ -733,12 +726,27 @@ class buyController {
 
       // ---------- BUILD WHERE CLAUSE ----------
       const whereClause = {
-        ticker: {
-          contains: ticker,
-        },
         isFiat: isFiatValue,
         isStandard: isStandardValue,
       };
+
+      // Add search term filter if provided
+      if (searchTerm && searchTerm.trim() !== "") {
+        whereClause.OR = [
+          {
+            ticker: {
+              contains: searchTerm.trim(),
+              mode: "insensitive",
+            },
+          },
+          {
+            network: {
+              contains: searchTerm.trim(),
+              mode: "insensitive",
+            },
+          },
+        ];
+      }
 
       // ---------- EXECUTE QUERIES ----------
       const totalCoins = await prisma.buy_crypto.count({
@@ -747,21 +755,39 @@ class buyController {
 
       const coins = await prisma.buy_crypto.findMany({
         where: whereClause,
-        orderBy: [
-          {
-            ticker: ticker === ticker ? "asc" : "asc", // Exact match prioritization done in app
-          },
-        ],
+        orderBy: {
+          ticker: "asc",
+        },
         skip: offset,
         take: limitNum,
       });
 
-      // Sort to prioritize exact matches
-      const sortedCoins = coins.sort((a, b) => {
-        if (a.ticker === ticker && b.ticker !== ticker) return -1;
-        if (a.ticker !== ticker && b.ticker === ticker) return 1;
-        return a.ticker.localeCompare(b.ticker);
-      });
+      // Sort to prioritize exact matches if search term provided
+      let sortedCoins = coins;
+      if (searchTerm && searchTerm.trim() !== "") {
+        const searchTermLower = searchTerm.trim().toLowerCase();
+        sortedCoins = coins.sort((a, b) => {
+          const aTickerLower = a.ticker.toLowerCase();
+          const bTickerLower = b.ticker.toLowerCase();
+          const aNetworkLower = (a.network || "").toLowerCase();
+          const bNetworkLower = (b.network || "").toLowerCase();
+
+          // Prioritize exact ticker match
+          if (aTickerLower === searchTermLower && bTickerLower !== searchTermLower) return -1;
+          if (aTickerLower !== searchTermLower && bTickerLower === searchTermLower) return 1;
+
+          // Prioritize exact network match
+          if (aNetworkLower === searchTermLower && bNetworkLower !== searchTermLower) return -1;
+          if (aNetworkLower !== searchTermLower && bNetworkLower === searchTermLower) return 1;
+
+          // Prioritize ticker starts with search term
+          if (aTickerLower.startsWith(searchTermLower) && !bTickerLower.startsWith(searchTermLower)) return -1;
+          if (!aTickerLower.startsWith(searchTermLower) && bTickerLower.startsWith(searchTermLower)) return 1;
+
+          // Default alphabetical sort
+          return aTickerLower.localeCompare(bTickerLower);
+        });
+      }
 
       // ---------- PARSE MAPPED PARTNERS ----------
       const parsedCoins = sortedCoins.map((coin) => ({
