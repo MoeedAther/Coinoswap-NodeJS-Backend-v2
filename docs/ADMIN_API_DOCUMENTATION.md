@@ -323,7 +323,7 @@ Disable two-factor authentication.
 
 ### 1. Change Password
 
-Change admin password.
+Change admin password and automatically logout.
 
 **Endpoint:** `POST /api/admin/change-password`
 
@@ -347,9 +347,15 @@ Change admin password.
 ```json
 {
   "success": true,
-  "message": "Password changed successfully"
+  "message": "Password changed successfully. Please login again with your new password."
 }
 ```
+
+**Important Notes:**
+- After successful password change, the session is automatically destroyed
+- The session cookie is cleared from the client
+- Admin must login again with the new password to continue
+- This is a security measure to ensure the new password is valid and to prevent session hijacking
 
 **Error Responses:**
 
@@ -377,6 +383,19 @@ Change admin password.
   "requires2FA": true
 }
 ```
+
+**500 - Session Destruction Failed:**
+```json
+{
+  "success": false,
+  "message": "Password changed but failed to logout. Please logout manually."
+}
+```
+
+**Notes:**
+- If this error occurs, the password was successfully changed but automatic logout failed
+- Admin should manually logout and login with the new password
+- This is a rare edge case related to session store issues
 
 ---
 

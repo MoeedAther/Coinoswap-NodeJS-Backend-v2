@@ -555,9 +555,21 @@ class adminController {
         },
       });
 
-      return res.status(200).json({
-        success: true,
-        message: "Password changed successfully",
+      // ---------- DESTROY SESSION ----------
+      req.session.destroy((error) => {
+        if (error) {
+          console.error("Session destruction error:", error);
+          return res.status(500).json({
+            success: false,
+            message: "Password changed but failed to logout. Please logout manually.",
+          });
+        }
+
+        res.clearCookie("sessionCoinoSwap");
+        return res.status(200).json({
+          success: true,
+          message: "Password changed successfully. Please login again with your new password.",
+        });
       });
     } catch (error) {
       return res.status(500).json({

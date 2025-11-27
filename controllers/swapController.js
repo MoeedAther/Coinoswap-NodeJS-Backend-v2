@@ -440,15 +440,11 @@ class swapController {
           continue;
         }
 
-        const key =
-          coin.standardTicker.toLowerCase() + coin.network.toLowerCase();
+        const key = coin.standardTicker.toLowerCase();
 
         if (coinKeys.has(key)) continue;
         let alikeCoins = coins.filter(
-          (c) =>
-            c.standardTicker &&
-            c.network &&
-            c.standardTicker.toLowerCase() + c.network.toLowerCase() === key
+          (c) => c.standardTicker && c.network && c.standardTicker === key
         );
 
         if (alikeCoins.length > 1) {
