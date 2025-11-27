@@ -56,7 +56,7 @@ class swapController {
 
       // ChangeNow API
       const changenowResp = await axios.get(
-        `https://api.changenow.io/v1/currencies?active=true`,
+        `https://api.changenow.io/v2/exchange/currencies?active=true`,
         {
           headers: {
             "x-changenow-api-key": process.env.CHANGENOW,
@@ -129,41 +129,47 @@ class swapController {
       if (changellyResp.data.result) {
         for (const c of changellyResp.data.result) {
           coins.push({
-            standardTicker: c.name.toLowerCase(),
+            standardTicker: c.ticker.toLowerCase() + c.blockchain.toLowerCase(),
             ticker: c.name,
-            requiresExtraId: false,
+            requiresExtraId: c.extraIdName ? true : false,
             name: c.fullName,
             network: c.blockchain || c.name,
+            shortName: ticker.toLowerCase(),
             image: c.image || null,
             swapPartner: "changelly",
             mappedPartners: [],
             data: c,
             coinType: "other",
-            isApproved: 0,
-            isStandard: 0,
+            isApproved: false,
+            isStandard: false,
           });
         }
       }
+
+      // return res.json({ coins: changellyResp.data.result });
 
       // Process ChangeNow coins
       if (changenowResp.data) {
         for (const c of changenowResp.data) {
           coins.push({
-            standardTicker: c.ticker.toLowerCase(),
+            standardTicker: c.ticker.toLowerCase() + c.network.toLowerCase(),
             ticker: c.ticker,
             requiresExtraId: c.isExtraIdSupported,
             name: c.name,
             network: c.network || c.ticker,
+            shortName: ticker.toLowerCase(),
             image: c.image || null,
             swapPartner: "changenow",
             mappedPartners: [],
             data: c,
             coinType: "other",
-            isApproved: 0,
-            isStandard: 0,
+            isApproved: false,
+            isStandard: false,
           });
         }
       }
+
+      // return res.json({ coins: changenowResp.data });
 
       // Process Changehero coins
       if (changeheroResp.data.result) {
@@ -172,22 +178,24 @@ class swapController {
           let network = c.blockchain || c.name;
 
           coins.push({
-            standardTicker: ticker.toLowerCase(),
+            standardTicker: ticker.toLowerCase() + network.toLowerCase(),
             ticker: ticker,
-            requiresExtraId: false,
+            requiresExtraId: c.extraIdName ? true : false,
             name: c.fullName,
             network: network,
-            shortName: c.publicTicker || c.name,
+            shortName: ticker.toLowerCase(),
             image: c.image || null,
             swapPartner: "changehero",
             mappedPartners: [],
             data: c,
             coinType: "other",
-            isApproved: 0,
-            isStandard: 0,
+            isApproved: false,
+            isStandard: false,
           });
         }
       }
+
+      // return res.json({ coins: changeheroResp.data });
 
       // Process Exolix coins
       if (exolixResp.data.data) {
@@ -233,6 +241,8 @@ class swapController {
           }
         }
       }
+
+      return res.json({ coins: exolixResp.data });
 
       // Process StealthEX coins
       if (stealthexResp.data) {
@@ -417,8 +427,6 @@ class swapController {
 
         coin.shortName = shortName || coinName;
       }
-
-      // return res.json({ coins: coins, networks: Array.from(allNetworks) });
 
       let coinKeys = new Set();
       let standardCoinKeys = new Set();

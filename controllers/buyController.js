@@ -383,6 +383,176 @@ class buyController {
     }
   };
 
+  // Create or Delete Standard Coin
+  static createStandardCoin = async (req, res) => {
+    try {
+      // ---------- CHECK AUTHENTICATION ----------
+      if (!req.session.adminId) {
+        return res.status(401).json({
+          success: false,
+          message: "Not authenticated",
+        });
+      }
+
+      const { action, unstandardCoinId, standardCoinId } = req.body;
+
+      // ---------- VALIDATE INPUT ----------
+      if (!action) {
+        return res.status(400).json({
+          success: false,
+          message: "action is required (create or delete)",
+        });
+      }
+
+      if (!["create", "delete"].includes(action)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid action. Must be 'create' or 'delete'",
+        });
+      }
+
+      // ---------- CREATE STANDARD COIN ----------
+      if (action === "create") {
+        if (!unstandardCoinId) {
+          return res.status(400).json({
+            success: false,
+            message: "unstandardCoinId is required for create action",
+          });
+        }
+
+        // Fetch unstandard coin
+        const unstandardCoin = await prisma.buy_crypto.findFirst({
+          where: {
+            id: parseInt(unstandardCoinId),
+            isStandard: false,
+          },
+        });
+
+        if (!unstandardCoin) {
+          return res.status(404).json({
+            success: false,
+            message: "Unstandard coin not found",
+          });
+        }
+
+        // Check if standard coin already exists
+        const existingStandardCoin = await prisma.buy_crypto.findFirst({
+          where: {
+            standardTicker: unstandardCoin.standardTicker,
+            isStandard: true,
+          },
+        });
+
+        if (existingStandardCoin) {
+          return res.status(400).json({
+            success: false,
+            message: `A standard coin with standardTicker '${unstandardCoin.standardTicker}' already exists`,
+            existingStandardCoin: {
+              id: existingStandardCoin.id,
+              ticker: existingStandardCoin.ticker,
+              name: existingStandardCoin.name,
+              network: existingStandardCoin.network,
+              standardTicker: existingStandardCoin.standardTicker,
+            },
+          });
+        }
+
+        // Create standard coin
+        const mappedPartners = [
+          {
+            buyPartner: unstandardCoin.buyPartner,
+            ticker: unstandardCoin.ticker,
+            name: unstandardCoin.name,
+            network: unstandardCoin.network,
+            isFiat: unstandardCoin.isFiat,
+          },
+        ];
+
+        const newStandardCoin = await prisma.buy_crypto.create({
+          data: {
+            standardTicker: unstandardCoin.standardTicker,
+            ticker: unstandardCoin.ticker,
+            name: unstandardCoin.name,
+            network: unstandardCoin.network,
+            image: unstandardCoin.image,
+            buyPartner: null,
+            mappedPartners: JSON.stringify(mappedPartners),
+            isFiat: unstandardCoin.isFiat,
+            isApproved: true,
+            isStandard: true,
+          },
+        });
+
+        return res.status(201).json({
+          success: true,
+          message: "Standard coin created successfully",
+          standardCoin: {
+            id: newStandardCoin.id,
+            standardTicker: newStandardCoin.standardTicker,
+            ticker: newStandardCoin.ticker,
+            name: newStandardCoin.name,
+            network: newStandardCoin.network,
+            image: newStandardCoin.image,
+            isFiat: newStandardCoin.isFiat,
+            isApproved: newStandardCoin.isApproved,
+            isStandard: newStandardCoin.isStandard,
+            mappedPartners: JSON.parse(newStandardCoin.mappedPartners),
+          },
+        });
+      }
+
+      // ---------- DELETE STANDARD COIN ----------
+      if (action === "delete") {
+        if (!standardCoinId) {
+          return res.status(400).json({
+            success: false,
+            message: "standardCoinId is required for delete action",
+          });
+        }
+
+        // Fetch standard coin
+        const standardCoin = await prisma.buy_crypto.findFirst({
+          where: {
+            id: parseInt(standardCoinId),
+            isStandard: true,
+          },
+        });
+
+        if (!standardCoin) {
+          return res.status(404).json({
+            success: false,
+            message: "Standard coin not found",
+          });
+        }
+
+        // Delete standard coin
+        await prisma.buy_crypto.delete({
+          where: {
+            id: parseInt(standardCoinId),
+          },
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Standard coin deleted successfully",
+          deletedCoin: {
+            id: standardCoin.id,
+            standardTicker: standardCoin.standardTicker,
+            ticker: standardCoin.ticker,
+            name: standardCoin.name,
+            network: standardCoin.network,
+          },
+        });
+      }
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Unexpected server error",
+        message: "Something went wrong while processing standard coin",
+      });
+    }
+  };
+
   // This controller is responsible for adding and deleting coins form standard coins
   static addAndDeleteCoin = async (req, res) => {
     try {

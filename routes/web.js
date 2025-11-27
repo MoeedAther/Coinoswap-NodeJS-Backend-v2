@@ -181,6 +181,7 @@ router.post("/tx/status", exchangeController.checkTransactionStatus);
 
 // ...................................... Buy Currencies .........................................../
 router.get("/buy/update-coins", buyCryptoController.updateCoins);
+router.post("/buy/create-standard-coin", buyCryptoController.createStandardCoin);
 router.post("/buy/add-delete-coins", buyCryptoController.addAndDeleteCoin);
 router.get("/buy/search-coins", buyCryptoController.searchCoins);
 
