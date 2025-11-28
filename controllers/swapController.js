@@ -631,18 +631,16 @@ class swapController {
     }
   };
 
-  // This controller is responsible for updating standard coin data
-  static updateStandardCoin = async (req, res) => {
+  // This controller is responsible for updating coin data (both standard and unstandard)
+  static updateCoin = async (req, res) => {
     try {
-      const { standardCoinId, shortName, coinType, image } = req.body;
-
-      console.log(req.body);
+      const { coinId, shortName, coinType, image, isApproved } = req.body;
 
       // ---------- VALIDATE INPUT ----------
-      if (!standardCoinId) {
+      if (!coinId) {
         return res.status(400).json({
           success: false,
-          message: "standardCoinId is required",
+          message: "coinId is required",
         });
       }
 
@@ -657,100 +655,14 @@ class swapController {
         });
       }
 
-      // ---------- FETCH STANDARD COIN ----------
-      const standardCoin = await prisma.swap_crypto.findFirst({
-        where: {
-          id: parseInt(standardCoinId),
-          isStandard: true,
-        },
-      });
-
-      if (!standardCoin) {
-        return res.status(404).json({
-          success: false,
-          message: "Standard coin not found",
-        });
-      }
-
-      const coin = standardCoin;
-
-      // ---------- BUILD UPDATE DATA ----------
-      const updateData = {};
-      if (shortName !== undefined) updateData.shortName = shortName;
-      if (coinType !== undefined) updateData.coinType = coinType;
-      if (image !== undefined) updateData.image = image;
-
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "No fields to update",
-        });
-      }
-
-      // ---------- UPDATE STANDARD COIN ----------
-
-      await prisma.swap_crypto.update({
-        where: { id: parseInt(standardCoinId) },
-        data: updateData,
-      });
-
-      // ---------- FETCH UPDATED COIN ----------
-      const updatedCoin = await prisma.swap_crypto.findUnique({
-        where: { id: parseInt(standardCoinId) },
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Standard coin updated successfully",
-        coin: {
-          id: updatedCoin.id,
-          standardTicker: updatedCoin.standardTicker,
-          name: updatedCoin.name,
-          network: updatedCoin.network,
-          shortName: updatedCoin.shortName,
-          image: updatedCoin.image,
-          coinType: updatedCoin.coinType,
-          requiresExtraId: updatedCoin.requiresExtraId,
-          isApproved: updatedCoin.isApproved,
-          mappedPartners: JSON.parse(updatedCoin.mappedPartners || "[]"),
-        },
-      });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({
-        success: false,
-        error: error.message || "Unexpected server error",
-        message: "Something went wrong while updating standard coin",
-      });
-    }
-  };
-
-  // This controller is responsible for approving/disapproving coins
-  static updateCoinApprovalStatus = async (req, res) => {
-    try {
-      const { coinId, isApproved } = req.body;
-
-      // ---------- VALIDATE INPUT ----------
-      if (!coinId) {
-        return res.status(400).json({
-          success: false,
-          message: "coinId is required",
-        });
-      }
-
-      if (isApproved === undefined || isApproved === null) {
-        return res.status(400).json({
-          success: false,
-          message: "isApproved is required (true or false)",
-        });
-      }
-
-      // Validate isApproved is boolean
-      if (typeof isApproved !== "boolean") {
-        return res.status(400).json({
-          success: false,
-          message: "isApproved must be a boolean value (true or false)",
-        });
+      // Validate isApproved if provided
+      if (isApproved !== undefined && isApproved !== null) {
+        if (typeof isApproved !== "boolean") {
+          return res.status(400).json({
+            success: false,
+            message: "isApproved must be a boolean value (true or false)",
+          });
+        }
       }
 
       // ---------- FETCH COIN ----------
@@ -765,36 +677,67 @@ class swapController {
         });
       }
 
-      // ---------- UPDATE COIN APPROVAL STATUS ----------
-      const updatedCoin = await prisma.swap_crypto.update({
+      // ---------- BUILD UPDATE DATA ----------
+      const updateData = {};
+      if (shortName !== undefined) updateData.shortName = shortName;
+      if (coinType !== undefined) updateData.coinType = coinType;
+      if (image !== undefined) updateData.image = image;
+      if (isApproved !== undefined && isApproved !== null) {
+        updateData.isApproved = isApproved;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No fields to update",
+        });
+      }
+
+      // ---------- UPDATE COIN ----------
+      await prisma.swap_crypto.update({
         where: { id: parseInt(coinId) },
-        data: {
-          isApproved: isApproved,
-        },
+        data: updateData,
       });
+
+      // ---------- FETCH UPDATED COIN ----------
+      const updatedCoin = await prisma.swap_crypto.findUnique({
+        where: { id: parseInt(coinId) },
+      });
+
+      const responseData = {
+        id: updatedCoin.id,
+        standardTicker: updatedCoin.standardTicker,
+        ticker: updatedCoin.ticker,
+        name: updatedCoin.name,
+        network: updatedCoin.network,
+        shortName: updatedCoin.shortName,
+        image: updatedCoin.image,
+        coinType: updatedCoin.coinType,
+        requiresExtraId: updatedCoin.requiresExtraId,
+        isApproved: updatedCoin.isApproved,
+        isStandard: updatedCoin.isStandard,
+        swapPartner: updatedCoin.swapPartner,
+      };
+
+      // Only include mappedPartners if it's a standard coin
+      if (updatedCoin.isStandard) {
+        responseData.mappedPartners = JSON.parse(updatedCoin.mappedPartners || "[]");
+      }
 
       return res.status(200).json({
         success: true,
-        message: `Coin ${isApproved ? "approved" : "disapproved"} successfully`,
-        coin: {
-          id: updatedCoin.id,
-          standardTicker: updatedCoin.standardTicker,
-          ticker: updatedCoin.ticker,
-          name: updatedCoin.name,
-          network: updatedCoin.network,
-          isApproved: updatedCoin.isApproved,
-          isStandard: updatedCoin.isStandard,
-          swapPartner: updatedCoin.swapPartner,
-        },
+        message: "Coin updated successfully",
+        coin: responseData,
       });
     } catch (error) {
       return res.status(500).json({
         success: false,
         error: error.message || "Unexpected server error",
-        message: "Something went wrong while updating coin approval status",
+        message: "Something went wrong while updating coin",
       });
     }
   };
+
 
   // This controller merges coins (both standard and unstandard) into a target standard coin's mappedPartners
   static mergeCoinsToMappedPartners = async (req, res) => {

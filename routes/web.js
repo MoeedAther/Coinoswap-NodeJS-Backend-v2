@@ -1,7 +1,6 @@
 import express from "express";
 import exchangeController from "../controllers/exchangeController.js";
 import CronController from "../controllers/cronController.js";
-import exchangeRatesController from "../controllers/individualExchangeRateController.js";
 import RateController from "../controllers/rateController.js";
 import buyCryptoController from "../controllers/buyController.js";
 import swapController from "../controllers/swapController.js";
@@ -11,20 +10,6 @@ const router = express.Router();
 
 //**************************************** Universal Rate API (New Improved Controller) ************************* */
 router.post("/rate", RateController.getRate);
-
-//**************************************** Price Check Apis (Legacy Individual Controllers) ************************* */
-router.post("/changelly/new/price", exchangeRatesController.changellyprice);
-router.post("/changenow/new/price", exchangeRatesController.changenowprice);
-router.post("/stealthex/new/price", exchangeRatesController.stealthexprice);
-router.post("/exolix/new/price", exchangeRatesController.exolixprice);
-router.post("/simpleswap/new/price", exchangeRatesController.simpleswapprice);
-router.post("/changehero/new/price", exchangeRatesController.changeheroprice);
-router.post("/godex/new/price", exchangeRatesController.godexprice);
-router.post(
-  "/letsexchange/new/price",
-  exchangeRatesController.letsexchangeprice
-);
-router.post("/easybit/new/price", exchangeRatesController.easybitprice);
 
 //.................................. Transaction APIs ......................................./
 
@@ -192,11 +177,7 @@ router.get("/buy/search-coins", buyCryptoController.searchCoins);
 router.get("/swap/update-coins", swapController.addCoins);
 router.post("/swap/destandardize-coin", swapController.deleteStandardCoin);
 router.get("/swap/get-standard-coin", swapController.getStandardCoin);
-router.post("/swap/update-standard-coin", swapController.updateStandardCoin);
-router.post(
-  "/swap/update-approval-status",
-  swapController.updateCoinApprovalStatus
-);
+router.post("/swap/update-coin", swapController.updateCoin);
 router.post(
   "/swap/merge-coins-to-mapped",
   swapController.mergeCoinsToMappedPartners

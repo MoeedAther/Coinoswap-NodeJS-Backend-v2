@@ -166,19 +166,27 @@ GET /api/swap/search-coins?searchTerm=btc&isStandard=1&page=1&limit=20
 
 ---
 
-### 5. Update Standard Coin
-**Endpoint:** `POST /api/swap/update-standard-coin`
-**Description:** Update metadata of a standard coin
+### 5. Update Coin
+**Endpoint:** `POST /api/swap/update-coin`
+**Description:** Update metadata and approval status of any coin (works for both standard and unstandard coins)
 
 **Request Body:**
 ```json
 {
-  "standardCoinId": 1,
+  "coinId": 1,
   "shortName": "btc",
   "coinType": "popular",
-  "image": "https://example.com/btc.png"
+  "image": "https://example.com/btc.png",
+  "isApproved": true
 }
 ```
+
+**Parameters:**
+- `coinId` (required) - ID of the coin to update
+- `shortName` (optional) - Short name for the coin
+- `coinType` (optional) - Type of coin
+- `image` (optional) - Image URL for the coin
+- `isApproved` (optional) - Approval status (true/false)
 
 **Valid Coin Types:**
 - `popular`
@@ -190,10 +198,11 @@ GET /api/swap/search-coins?searchTerm=btc&isStandard=1&page=1&limit=20
 ```json
 {
   "success": true,
-  "message": "Standard coin updated successfully",
+  "message": "Coin updated successfully",
   "coin": {
     "id": 1,
     "standardTicker": "BTC",
+    "ticker": "btc",
     "name": "Bitcoin",
     "network": "BTC",
     "shortName": "btc",
@@ -201,46 +210,21 @@ GET /api/swap/search-coins?searchTerm=btc&isStandard=1&page=1&limit=20
     "coinType": "popular",
     "requiresExtraId": false,
     "isApproved": true,
+    "isStandard": true,
+    "swapPartner": null,
     "mappedPartners": [...]
   }
 }
 ```
 
----
-
-### 6. Update Approval Status
-**Endpoint:** `POST /api/swap/update-approval-status`
-**Description:** Approve or disapprove a coin (works for both standard and unstandard coins)
-
-**Request Body:**
-```json
-{
-  "coinId": 1,
-  "isApproved": true
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Coin approved successfully",
-  "coin": {
-    "id": 1,
-    "standardTicker": "BTC",
-    "ticker": "btc",
-    "name": "Bitcoin",
-    "network": "BTC",
-    "isApproved": true,
-    "isStandard": true,
-    "swapPartner": null
-  }
-}
-```
+**Notes:**
+- Works for both standard and unstandard coins
+- `mappedPartners` is only included in response for standard coins
+- At least one field (`shortName`, `coinType`, `image`, or `isApproved`) must be provided
 
 ---
 
-### 7. Merge Coins to Mapped Partners
+### 6. Merge Coins to Mapped Partners
 **Endpoint:** `POST /api/swap/merge-coins-to-mapped`
 **Description:** Merge coins (both standard and unstandard) into a target standard coin's mappedPartners array
 
@@ -318,7 +302,7 @@ GET /api/swap/search-coins?searchTerm=btc&isStandard=1&page=1&limit=20
 
 ---
 
-### 8. Update Notifications
+### 7. Update Notifications
 **Endpoint:** `POST /api/swap/update-notifications`
 **Description:** Update pay-in and pay-out notifications for a specific partner in mappedPartners
 
@@ -462,13 +446,14 @@ POST /api/swap/make-standard
   "requiresExtraId": false
 }
 
-# 3. Update metadata
-POST /api/swap/update-standard-coin
+# 3. Update metadata and approval status
+POST /api/swap/update-coin
 {
-  "standardCoinId": 1,
+  "coinId": 1,
   "shortName": "btc",
   "coinType": "popular",
-  "image": "https://example.com/btc.png"
+  "image": "https://example.com/btc.png",
+  "isApproved": true
 }
 
 # 4. Update notifications for a partner

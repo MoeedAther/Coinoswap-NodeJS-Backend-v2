@@ -248,6 +248,7 @@ function getApiTesterHTML() {
         }
         .form-group {
             margin-bottom: 12px;
+            position: relative;
         }
         .form-group label {
             display: block;
@@ -337,6 +338,62 @@ function getApiTesterHTML() {
             word-wrap: break-word;
             max-height: 400px;
             overflow-y: auto;
+        }
+        .searchable-dropdown {
+            position: absolute;
+            z-index: 1000;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            max-height: 250px;
+            overflow-y: auto;
+            width: calc(100% - 30px);
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .searchable-dropdown.show {
+            display: block;
+        }
+        .dropdown-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+        .dropdown-item:hover {
+            background: #f5f5f5;
+        }
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .dropdown-item-ticker {
+            font-weight: bold;
+            color: #007bff;
+            margin-right: 8px;
+        }
+        .dropdown-item-name {
+            color: #333;
+        }
+        .dropdown-item-network {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .dropdown-no-results {
+            padding: 10px 12px;
+            color: #999;
+            text-align: center;
+        }
+        #sellCoinSearch, #getCoinSearch {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #sellCoinSearch:focus, #getCoinSearch:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
         }
         .loading {
             display: inline-block;
@@ -851,17 +908,18 @@ function getApiTesterHTML() {
                         </div>
                     </div>
 
-                    <!-- Update Standard Coin -->
+                    <!-- Update Coin -->
                     <div class="api-item">
                         <div class="api-item-header" onclick="toggleApi(this)">
-                            <span class="api-item-title">Update Standard Coin</span>
+                            <span class="api-item-title">Update Coin</span>
                             <span class="method-badge method-post">POST</span>
                         </div>
                         <div class="api-item-body">
-                            <form onsubmit="testApi(event, '/api/swap/update-standard-coin', 'POST')">
+                            <form onsubmit="testApi(event, '/api/swap/update-coin', 'POST')">
                                 <div class="form-group">
-                                    <label>Standard Coin ID *</label>
-                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                    <label>Coin ID *</label>
+                                    <input type="number" name="coinId" placeholder="1" required>
+                                    <small>Works for both standard and unstandard coins</small>
                                 </div>
                                 <div class="form-group">
                                     <label>Short Name</label>
@@ -880,27 +938,9 @@ function getApiTesterHTML() {
                                     <label>Image URL</label>
                                     <input type="text" name="image" placeholder="https://...">
                                 </div>
-                                <button type="submit" class="btn btn-primary">Send Request</button>
-                                <div class="response-section" style="display:none;"></div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Update Approval Status -->
-                    <div class="api-item">
-                        <div class="api-item-header" onclick="toggleApi(this)">
-                            <span class="api-item-title">Update Approval Status</span>
-                            <span class="method-badge method-post">POST</span>
-                        </div>
-                        <div class="api-item-body">
-                            <form onsubmit="testApi(event, '/api/swap/update-approval-status', 'POST')">
                                 <div class="form-group">
-                                    <label>Coin ID *</label>
-                                    <input type="number" name="coinId" placeholder="1" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Is Approved *</label>
-                                    <select name="isApproved" required>
+                                    <label>Is Approved</label>
+                                    <select name="isApproved">
                                         <option value="">Select status</option>
                                         <option value="true">Approve (true)</option>
                                         <option value="false">Disapprove (false)</option>
@@ -965,6 +1005,79 @@ function getApiTesterHTML() {
                                     <small>Optional - Array of pay-out notification strings</small>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Rate Controller APIs Section -->
+        <h2 class="section-title">💱 Rate Controller APIs</h2>
+        <div class="api-grid">
+
+            <!-- Exchange Rate Card -->
+            <div class="api-group-card">
+                <div class="api-group-header">
+                    <h2>💹 Exchange Rates</h2>
+                    <p>Get real-time exchange rates from swap partners</p>
+                </div>
+                <div class="api-list">
+                    <!-- Get Rate -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Get Exchange Rate</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testRateApi(event, '/api/rate', 'POST')">
+                                <div class="form-group">
+                                    <label>Send Coin (Sell) *</label>
+                                    <input type="text" id="sellCoinSearch" placeholder="Search coins..." autocomplete="off">
+                                    <input type="hidden" id="sellCoinValue" name="sell" required>
+                                    <div id="sellCoinDropdown" class="searchable-dropdown"></div>
+                                    <small>Type to search and select the coin you want to send</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Receive Coin (Get) *</label>
+                                    <input type="text" id="getCoinSearch" placeholder="Search coins..." autocomplete="off">
+                                    <input type="hidden" id="getCoinValue" name="get" required>
+                                    <div id="getCoinDropdown" class="searchable-dropdown"></div>
+                                    <small>Type to search and select the coin you want to receive</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Amount *</label>
+                                    <input type="number" step="any" name="amount" placeholder="1.5" required>
+                                    <small>Amount of send coin</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Exchange Type *</label>
+                                    <select name="exchangetype" required>
+                                        <option value="">Select type</option>
+                                        <option value="Fixed">Fixed Rate</option>
+                                        <option value="Floating">Floating Rate</option>
+                                    </select>
+                                    <small>Fixed rate locks the price, Floating rate may vary</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Exchange *</label>
+                                    <select name="exchange" required>
+                                        <option value="">Select exchange</option>
+                                        <option value="changelly">Changelly</option>
+                                        <option value="changenow">ChangeNOW</option>
+                                        <option value="changehero">ChangeHero</option>
+                                        <option value="simpleswap">SimpleSwap</option>
+                                        <option value="godex">Godex</option>
+                                        <option value="stealthex">StealthEX</option>
+                                        <option value="letsexchange">LetsExchange</option>
+                                        <option value="exolix">Exolix</option>
+                                        <option value="easybit">EasyBit</option>
+                                    </select>
+                                    <small>Select swap partner exchange</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Get Rate</button>
                                 <div class="response-section" style="display:none;"></div>
                             </form>
                         </div>
@@ -1067,6 +1180,176 @@ function getApiTesterHTML() {
                 button.textContent = originalText;
             }
         }
+
+        // Store all coins globally for search
+        let allCoins = [];
+
+        // Load coins for rate testing dropdowns
+        async function loadCoinsForRateTesting() {
+            try {
+                // Fetch standard coins for rate testing
+                const response = await fetch(baseUrl + '/api/swap/search-coins?isStandard=1&page=1&limit=1000', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.coins) {
+                    allCoins = data.coins;
+
+                    // Setup searchable dropdowns
+                    setupSearchableDropdown('sellCoinSearch', 'sellCoinValue', 'sellCoinDropdown');
+                    setupSearchableDropdown('getCoinSearch', 'getCoinValue', 'getCoinDropdown');
+                }
+            } catch (error) {
+                console.error('Failed to load coins:', error);
+                document.getElementById('sellCoinSearch').placeholder = 'Failed to load coins';
+                document.getElementById('getCoinSearch').placeholder = 'Failed to load coins';
+            }
+        }
+
+        // Setup searchable dropdown functionality
+        function setupSearchableDropdown(searchInputId, valueInputId, dropdownId) {
+            const searchInput = document.getElementById(searchInputId);
+            const valueInput = document.getElementById(valueInputId);
+            const dropdown = document.getElementById(dropdownId);
+
+            // Show dropdown on focus
+            searchInput.addEventListener('focus', function() {
+                filterAndShowDropdown(searchInputId, dropdownId, '');
+            });
+
+            // Filter on input
+            searchInput.addEventListener('input', function() {
+                const searchTerm = this.value;
+                filterAndShowDropdown(searchInputId, dropdownId, searchTerm);
+            });
+
+            // Handle dropdown item selection
+            dropdown.addEventListener('click', function(e) {
+                const item = e.target.closest('.dropdown-item');
+                if (item && item.dataset.value) {
+                    valueInput.value = item.dataset.value;
+                    searchInput.value = item.dataset.displayText;
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                }
+            });
+        }
+
+        // Filter and display dropdown items
+        function filterAndShowDropdown(searchInputId, dropdownId, searchTerm) {
+            const dropdown = document.getElementById(dropdownId);
+            const searchLower = searchTerm.toLowerCase();
+
+            // Filter coins based on search term
+            const filteredCoins = allCoins.filter(coin => {
+                const ticker = coin.ticker.toLowerCase();
+                const name = coin.name.toLowerCase();
+                const network = coin.network.toLowerCase();
+
+                return ticker.includes(searchLower) ||
+                       name.includes(searchLower) ||
+                       network.includes(searchLower);
+            });
+
+            // Build dropdown HTML
+            if (filteredCoins.length === 0) {
+                dropdown.innerHTML = '<div class="dropdown-no-results">No coins found</div>';
+            } else {
+                dropdown.innerHTML = filteredCoins.map(coin => {
+                    const displayText = \`\${coin.ticker.toUpperCase()} - \${coin.name} (\${coin.network})\`;
+                    return \`
+                        <div class="dropdown-item" data-value="\${coin.standardTicker}" data-display-text="\${displayText}">
+                            <span class="dropdown-item-ticker">\${coin.ticker.toUpperCase()}</span>
+                            <span class="dropdown-item-name">\${coin.name}</span>
+                            <span class="dropdown-item-network">(\${coin.network})</span>
+                        </div>
+                    \`;
+                }).join('');
+            }
+
+            dropdown.classList.add('show');
+        }
+
+        // Test Rate API
+        async function testRateApi(event, endpoint, method) {
+            event.preventDefault();
+
+            const form = event.target;
+            const button = form.querySelector('button[type="submit"]');
+            const responseSection = form.querySelector('.response-section');
+            const originalText = button.textContent;
+
+            // Validate coin selections
+            const sellCoin = document.getElementById('sellCoinValue').value;
+            const getCoin = document.getElementById('getCoinValue').value;
+
+            if (!sellCoin || !getCoin) {
+                alert('Please select both send and receive coins from the dropdown');
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = 'Loading...';
+            responseSection.style.display = 'block';
+            responseSection.innerHTML = '<h4>Loading...</h4>';
+
+            try {
+                const formData = new FormData(form);
+                const body = {};
+
+                for (const [key, value] of formData.entries()) {
+                    // Convert amount to number
+                    if (key === 'amount') {
+                        body[key] = parseFloat(value);
+                    } else {
+                        body[key] = value;
+                    }
+                }
+
+                const options = {
+                    method: method,
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                };
+
+                const response = await fetch(baseUrl + endpoint, options);
+                const data = await response.json();
+                const statusCode = response.status;
+
+                responseSection.style.display = 'block';
+                responseSection.innerHTML = \`
+                    <h4>Response <span class="response-code \${statusCode >= 200 && statusCode < 300 ? 'code-200' : 'code-error'}">\${statusCode}</span></h4>
+                    <div class="response-body">\${JSON.stringify(data, null, 2)}</div>
+                \`;
+
+            } catch (error) {
+                responseSection.style.display = 'block';
+                responseSection.innerHTML = \`
+                    <h4>Error</h4>
+                    <div class="response-body" style="color: #ff6b6b;">\${error.message}</div>
+                \`;
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        // Load coins on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCoinsForRateTesting();
+        });
     </script>
 </body>
 </html>`;

@@ -3,7 +3,6 @@ import request from "request";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 import prisma from "../database/prisma.js";
-import { fetchCoinFromDB } from "../Js/functions.js";
 
 dotenv.config();
 
@@ -44,6 +43,52 @@ function getExchangeStatus(exchangeName, partners) {
     isEnabled: partner.isEnabled,
     hasGiveAway: partner.hasGiveAway,
   };
+}
+
+/**
+ * Fetch coin data from database for specific exchange
+ * This function replaces the old fetchCoinFromDB to work with the new standard coin structure
+ * @param {string} standardTicker - The standard ticker of the coin (e.g., "BTC")
+ * @param {string} exchangeName - Name of the exchange (e.g., "changelly")
+ * @returns {Promise<Object>} { ticker: string, network: string }
+ */
+async function fetchCoinForExchange(standardTicker, exchangeName) {
+  try {
+    // Fetch the standard coin from database
+    const coin = await prisma.swap_crypto.findFirst({
+      where: {
+        standardTicker: standardTicker,
+        isStandard: true,
+        isApproved: true,
+      },
+    });
+
+    if (!coin) {
+      throw new Error(
+        `Cryptocurrency not found in database: ${standardTicker}`
+      );
+    }
+
+    // Parse mappedPartners
+    const mappedPartners = JSON.parse(coin.mappedPartners || "[]");
+
+    // Find the partner for this exchange
+    const partner = mappedPartners.find((p) => p.swapPartner === exchangeName);
+
+    if (!partner) {
+      throw new Error(
+        `Exchange partner '${exchangeName}' not found for coin ${standardTicker}`
+      );
+    }
+
+    // Return the ticker and network for this specific exchange
+    return {
+      ticker: partner.ticker,
+      network: partner.network,
+    };
+  } catch (error) {
+    throw new Error(error.message || "Failed to fetch coin from database");
+  }
 }
 
 /**
@@ -398,8 +443,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -675,8 +720,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -839,8 +884,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -955,23 +1000,27 @@ class RateController {
               .json(formatSuccessResponse(rateObject, hasGiveAway));
           } else {
             if (parseFloat(amount) < rateObject.min) {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_below_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_below_range",
+                    rateObject
+                  )
+                );
             } else {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_above_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_above_range",
+                    rateObject
+                  )
+                );
             }
           }
         } else if (data.error) {
@@ -983,23 +1032,27 @@ class RateController {
             errorMessage.includes("Amount is bigger than maximum")
           ) {
             if (parseFloat(amount) < rateObject.min) {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_below_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_below_range",
+                    rateObject
+                  )
+                );
             } else {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_above_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_above_range",
+                    rateObject
+                  )
+                );
             }
           } else {
             throw new Error("Unexpected API response");
@@ -1008,14 +1061,16 @@ class RateController {
           throw new Error("Unexpected API response");
         }
       } catch (error) {
-        return res.status(502).json(
-          formatErrorResponse(
-            exchangeName,
-            exchangetype,
-            "exchange_response_error",
-            rateObject
-          )
-        );
+        return res
+          .status(502)
+          .json(
+            formatErrorResponse(
+              exchangeName,
+              exchangetype,
+              "exchange_response_error",
+              rateObject
+            )
+          );
       }
     } catch (error) {
       const metadata = getExchangeMetadata(exchangeName);
@@ -1051,8 +1106,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -1139,36 +1194,42 @@ class RateController {
           parseFloat(amount) > rateObject.max
         ) {
           if (parseFloat(amount) < rateObject.min) {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_below_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_below_range",
+                  rateObject
+                )
+              );
           } else {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_above_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_above_range",
+                  rateObject
+                )
+              );
           }
         } else {
           throw new Error("Unexpected API response");
         }
       } catch (error) {
-        return res.status(502).json(
-          formatErrorResponse(
-            exchangeName,
-            exchangetype,
-            "exchange_response_error",
-            rateObject
-          )
-        );
+        return res
+          .status(502)
+          .json(
+            formatErrorResponse(
+              exchangeName,
+              exchangetype,
+              "exchange_response_error",
+              rateObject
+            )
+          );
       }
     } catch (error) {
       const metadata = getExchangeMetadata(exchangeName);
@@ -1204,8 +1265,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -1279,41 +1340,47 @@ class RateController {
             data.message ===
             "Amount to exchange is below the possible min amount to exchange"
           ) {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_below_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_below_range",
+                  rateObject
+                )
+              );
           }
 
           if (
             data.message ===
             "Amount to exchange is higher the possible max amount to exchange"
           ) {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_above_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_above_range",
+                  rateObject
+                )
+              );
           }
         } else {
           throw new Error("Unexpected API response");
         }
       } catch (error) {
-        return res.status(502).json(
-          formatErrorResponse(
-            exchangeName,
-            exchangetype,
-            "exchange_response_error",
-            rateObject
-          )
-        );
+        return res
+          .status(502)
+          .json(
+            formatErrorResponse(
+              exchangeName,
+              exchangetype,
+              "exchange_response_error",
+              rateObject
+            )
+          );
       }
     } catch (error) {
       const metadata = getExchangeMetadata(exchangeName);
@@ -1349,8 +1416,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -1429,36 +1496,42 @@ class RateController {
           data.description.includes("Amount does not fall within the range.")
         ) {
           if (parseFloat(amount) < rateObject.min) {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_below_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_below_range",
+                  rateObject
+                )
+              );
           } else {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_above_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_above_range",
+                  rateObject
+                )
+              );
           }
         } else {
           throw new Error("Unexpected API response");
         }
       } catch (error) {
-        return res.status(502).json(
-          formatErrorResponse(
-            exchangeName,
-            exchangetype,
-            "exchange_response_error",
-            rateObject
-          )
-        );
+        return res
+          .status(502)
+          .json(
+            formatErrorResponse(
+              exchangeName,
+              exchangetype,
+              "exchange_response_error",
+              rateObject
+            )
+          );
       }
     } catch (error) {
       const metadata = getExchangeMetadata(exchangeName);
@@ -1494,8 +1567,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -1571,25 +1644,29 @@ class RateController {
               .json(formatSuccessResponse(rateObject, hasGiveAway));
           } else {
             if (parseFloat(amount) < rateObject.min) {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_below_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_below_range",
+                    rateObject
+                  )
+                );
             }
 
             if (parseFloat(amount) > rateObject.max) {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_above_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_above_range",
+                    rateObject
+                  )
+                );
             }
           }
         } else if (data.error) {
@@ -1598,14 +1675,16 @@ class RateController {
           throw new Error("Unexpected API response");
         }
       } catch (error) {
-        return res.status(502).json(
-          formatErrorResponse(
-            exchangeName,
-            exchangetype,
-            "exchange_response_error",
-            rateObject
-          )
-        );
+        return res
+          .status(502)
+          .json(
+            formatErrorResponse(
+              exchangeName,
+              exchangetype,
+              "exchange_response_error",
+              rateObject
+            )
+          );
       }
     } catch (error) {
       const metadata = getExchangeMetadata(exchangeName);
@@ -1641,8 +1720,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -1685,14 +1764,17 @@ class RateController {
           float: typeidentifier,
         };
 
-        const response = await fetch(`https://api.letsexchange.io/api/v1/info`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: process.env.LETSEXCHANGE_API_KEY,
-          },
-          body: JSON.stringify(param),
-        });
+        const response = await fetch(
+          `https://api.letsexchange.io/api/v1/info`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: process.env.LETSEXCHANGE_API_KEY,
+            },
+            body: JSON.stringify(param),
+          }
+        );
 
         const data = await response.json();
 
@@ -1723,39 +1805,45 @@ class RateController {
               .json(formatSuccessResponse(rateObject, hasGiveAway));
           } else {
             if (parseFloat(amount) < rateObject.min) {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_below_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_below_range",
+                    rateObject
+                  )
+                );
             }
 
             if (parseFloat(amount) > rateObject.max) {
-              return res.status(200).json(
-                formatErrorResponse(
-                  exchangeName,
-                  exchangetype,
-                  "deposit_above_range",
-                  rateObject
-                )
-              );
+              return res
+                .status(200)
+                .json(
+                  formatErrorResponse(
+                    exchangeName,
+                    exchangetype,
+                    "deposit_above_range",
+                    rateObject
+                  )
+                );
             }
           }
         } else {
           throw new Error("Unexpected API response");
         }
       } catch (error) {
-        return res.status(502).json(
-          formatErrorResponse(
-            exchangeName,
-            exchangetype,
-            "exchange_response_error",
-            rateObject
-          )
-        );
+        return res
+          .status(502)
+          .json(
+            formatErrorResponse(
+              exchangeName,
+              exchangetype,
+              "exchange_response_error",
+              rateObject
+            )
+          );
       }
     } catch (error) {
       const metadata = getExchangeMetadata(exchangeName);
@@ -1790,8 +1878,8 @@ class RateController {
       // Fetch coin data with exchange-specific ticker and network
       let coin;
       try {
-        const sellCoinObj = await fetchCoinFromDB(sell, exchangeName);
-        const getCoinObj = await fetchCoinFromDB(get, exchangeName);
+        const sellCoinObj = await fetchCoinForExchange(sell, exchangeName);
+        const getCoinObj = await fetchCoinForExchange(get, exchangeName);
         coin = {
           sellTicker: sellCoinObj.ticker,
           sellNetwork: sellCoinObj.network,
@@ -1877,38 +1965,44 @@ class RateController {
             .json(formatSuccessResponse(rateObject, hasGiveAway));
         } else if (result2.errorMessage === "Not allowed amount") {
           if (parseFloat(amount) < rateObject.min) {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_below_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_below_range",
+                  rateObject
+                )
+              );
           }
 
           if (parseFloat(amount) > rateObject.max) {
-            return res.status(200).json(
-              formatErrorResponse(
-                exchangeName,
-                exchangetype,
-                "deposit_above_range",
-                rateObject
-              )
-            );
+            return res
+              .status(200)
+              .json(
+                formatErrorResponse(
+                  exchangeName,
+                  exchangetype,
+                  "deposit_above_range",
+                  rateObject
+                )
+              );
           }
         } else {
           throw new Error("Unexpected API response");
         }
       } catch (error) {
-        return res.status(502).json(
-          formatErrorResponse(
-            exchangeName,
-            exchangetype,
-            "exchange_response_error",
-            rateObject
-          )
-        );
+        return res
+          .status(502)
+          .json(
+            formatErrorResponse(
+              exchangeName,
+              exchangetype,
+              "exchange_response_error",
+              rateObject
+            )
+          );
       }
     } catch (error) {
       const metadata = getExchangeMetadata(exchangeName);
