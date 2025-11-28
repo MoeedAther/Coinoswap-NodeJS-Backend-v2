@@ -368,7 +368,7 @@ function getApiTesterHTML() {
     <div class="container">
         <div class="header">
             <h1>🔧 API Tester</h1>
-            <p>Test Admin, Buy, and Swap Controller APIs</p>
+            <p>Test Admin, Buy Controller, and Swap Controller APIs</p>
         </div>
 
         <div class="base-url">
@@ -639,65 +639,6 @@ function getApiTesterHTML() {
                 </div>
             </div>
 
-            <!-- Partners Card -->
-            <div class="api-group-card">
-                <div class="api-group-header">
-                    <h2>🤝 Partners</h2>
-                    <p>Manage exchange partners</p>
-                </div>
-                <div class="api-list">
-                    <!-- Get Partners -->
-                    <div class="api-item">
-                        <div class="api-item-header" onclick="toggleApi(this)">
-                            <span class="api-item-title">Get Partners</span>
-                            <span class="method-badge method-get">GET</span>
-                        </div>
-                        <div class="api-item-body">
-                            <form onsubmit="testApi(event, '/api/admin/settings/partners', 'GET')">
-                                <button type="submit" class="btn btn-primary">Send Request</button>
-                                <div class="response-section" style="display:none;"></div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Update Partners -->
-                    <div class="api-item">
-                        <div class="api-item-header" onclick="toggleApi(this)">
-                            <span class="api-item-title">Update Partners</span>
-                            <span class="method-badge method-put">PUT</span>
-                        </div>
-                        <div class="api-item-body">
-                            <form onsubmit="testApi(event, '/api/admin/settings/partners', 'PUT')">
-                                <div class="form-group">
-                                    <label>Partners JSON *</label>
-                                    <textarea name="partners" required placeholder='{"partner1": true, "partner2": false}'></textarea>
-                                    <small>JSON object with partner names as keys and boolean values</small>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Send Request</button>
-                                <div class="response-section" style="display:none;"></div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Toggle Partner -->
-                    <div class="api-item">
-                        <div class="api-item-header" onclick="toggleApi(this)">
-                            <span class="api-item-title">Toggle Partner</span>
-                            <span class="method-badge method-post">POST</span>
-                        </div>
-                        <div class="api-item-body">
-                            <form onsubmit="testApi(event, '/api/admin/settings/partners/toggle', 'POST')">
-                                <div class="form-group">
-                                    <label>Partner Name *</label>
-                                    <input type="text" name="partner" placeholder="changelly" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Send Request</button>
-                                <div class="response-section" style="display:none;"></div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
         </div>
 
@@ -769,8 +710,9 @@ function getApiTesterHTML() {
                         <div class="api-item-body">
                             <form onsubmit="testApi(event, '/api/buy/search-coins', 'GET')">
                                 <div class="form-group">
-                                    <label>Ticker *</label>
-                                    <input type="text" name="ticker" placeholder="BTC" required>
+                                    <label>Search Term</label>
+                                    <input type="text" name="searchTerm" placeholder="BTC">
+                                    <small>Optional - searches ticker and network</small>
                                 </div>
                                 <div class="form-group">
                                     <label>Is Fiat *</label>
@@ -830,39 +772,6 @@ function getApiTesterHTML() {
                         </div>
                     </div>
 
-                    <!-- Add/Delete Coin -->
-                    <div class="api-item">
-                        <div class="api-item-header" onclick="toggleApi(this)">
-                            <span class="api-item-title">Add/Delete Coin</span>
-                            <span class="method-badge method-post">POST</span>
-                        </div>
-                        <div class="api-item-body">
-                            <form onsubmit="testApi(event, '/api/swap/add-delete-coins', 'POST')">
-                                <div class="form-group">
-                                    <label>Action *</label>
-                                    <select name="action" required>
-                                        <option value="add">Add</option>
-                                        <option value="delete">Delete</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Standard Coin ID *</label>
-                                    <input type="number" name="standardCoinId" placeholder="1" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Unstandard Coin ID (for add)</label>
-                                    <input type="number" name="unstandardCoinId" placeholder="2">
-                                </div>
-                                <div class="form-group">
-                                    <label>Partner Name (for delete)</label>
-                                    <input type="text" name="partnerName" placeholder="changelly">
-                                </div>
-                                <button type="submit" class="btn btn-primary">Send Request</button>
-                                <div class="response-section" style="display:none;"></div>
-                            </form>
-                        </div>
-                    </div>
-
                     <!-- Search Coins -->
                     <div class="api-item">
                         <div class="api-item-header" onclick="toggleApi(this)">
@@ -872,8 +781,9 @@ function getApiTesterHTML() {
                         <div class="api-item-body">
                             <form onsubmit="testApi(event, '/api/swap/search-coins', 'GET')">
                                 <div class="form-group">
-                                    <label>Ticker *</label>
-                                    <input type="text" name="ticker" placeholder="btc" required>
+                                    <label>Search Term</label>
+                                    <input type="text" name="searchTerm" placeholder="btc">
+                                    <small>Optional - searches ticker, name, and network</small>
                                 </div>
                                 <div class="form-group">
                                     <label>Is Standard *</label>
@@ -898,32 +808,13 @@ function getApiTesterHTML() {
                 </div>
             </div>
 
-            <!-- Standardization Card -->
+            <!-- Standard Coin Operations Card -->
             <div class="api-group-card">
                 <div class="api-group-header">
-                    <h2>⭐ Standardization</h2>
-                    <p>Standardize and manage standard coins</p>
+                    <h2>⭐ Standard Coin Operations</h2>
+                    <p>Manage standard coins and their metadata</p>
                 </div>
                 <div class="api-list">
-                    <!-- Standardize Coin -->
-                    <div class="api-item">
-                        <div class="api-item-header" onclick="toggleApi(this)">
-                            <span class="api-item-title">Standardize Coin</span>
-                            <span class="method-badge method-post">POST</span>
-                        </div>
-                        <div class="api-item-body">
-                            <form onsubmit="testApi(event, '/api/swap/standardize-coin', 'POST')">
-                                <div class="form-group">
-                                    <label>Coin IDs (JSON Array) *</label>
-                                    <textarea name="coinIds" required placeholder='[1, 2, 3]'></textarea>
-                                    <small>Array of coin IDs to standardize together</small>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Send Request</button>
-                                <div class="response-section" style="display:none;"></div>
-                            </form>
-                        </div>
-                    </div>
-
                     <!-- Destandardize Coin -->
                     <div class="api-item">
                         <div class="api-item-header" onclick="toggleApi(this)">
@@ -974,14 +865,14 @@ function getApiTesterHTML() {
                                 </div>
                                 <div class="form-group">
                                     <label>Short Name</label>
-                                    <input type="text" name="shortName" placeholder="Bitcoin">
+                                    <input type="text" name="shortName" placeholder="btc">
                                 </div>
                                 <div class="form-group">
                                     <label>Coin Type</label>
                                     <select name="coinType">
                                         <option value="">Select type</option>
-                                        <option value="stable">Stable</option>
-                                        <option value="stable&popular">Stable & Popular</option>
+                                        <option value="popular">Popular</option>
+                                        <option value="popular&stable">Popular & Stable</option>
                                         <option value="other">Other</option>
                                     </select>
                                 </div>
@@ -989,10 +880,89 @@ function getApiTesterHTML() {
                                     <label>Image URL</label>
                                     <input type="text" name="image" placeholder="https://...">
                                 </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Update Approval Status -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Update Approval Status</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/update-approval-status', 'POST')">
                                 <div class="form-group">
-                                    <label>Mapped Partners (JSON)</label>
-                                    <textarea name="mappedPartners" placeholder='[{"swapPartner": "changelly", "payInNotification": null}]'></textarea>
-                                    <small>Optional: Update mapped partners array</small>
+                                    <label>Coin ID *</label>
+                                    <input type="number" name="coinId" placeholder="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Is Approved *</label>
+                                    <select name="isApproved" required>
+                                        <option value="">Select status</option>
+                                        <option value="true">Approve (true)</option>
+                                        <option value="false">Disapprove (false)</option>
+                                    </select>
+                                    <small>Approve or disapprove the coin</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Merge Coins to Mapped Partners -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Merge Coins to Mapped Partners</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/merge-coins-to-mapped', 'POST')">
+                                <div class="form-group">
+                                    <label>Target Standard Coin ID *</label>
+                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                    <small>The standard coin to merge partners into</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Coin IDs (JSON Array) *</label>
+                                    <textarea name="coinIds" required placeholder='[123, 456, 789]'></textarea>
+                                    <small>Array of both standard and unstandard coin IDs to merge. Standard coins will have their mappedPartners merged and be set to isApproved=false. Unstandard coins will be added as new partners.</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Send Request</button>
+                                <div class="response-section" style="display:none;"></div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Update Notifications -->
+                    <div class="api-item">
+                        <div class="api-item-header" onclick="toggleApi(this)">
+                            <span class="api-item-title">Update Notifications</span>
+                            <span class="method-badge method-post">POST</span>
+                        </div>
+                        <div class="api-item-body">
+                            <form onsubmit="testApi(event, '/api/swap/update-notifications', 'POST')">
+                                <div class="form-group">
+                                    <label>Standard Coin ID *</label>
+                                    <input type="number" name="standardCoinId" placeholder="1" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Swap Partner *</label>
+                                    <input type="text" name="swapPartner" placeholder="changelly" required>
+                                    <small>The partner name in mappedPartners</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Pay In Notifications (JSON Array)</label>
+                                    <textarea name="payInNotifications" placeholder='["Send exact amount", "Include memo"]'></textarea>
+                                    <small>Optional - Array of pay-in notification strings</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Pay Out Notifications (JSON Array)</label>
+                                    <textarea name="payOutNotifications" placeholder='["Funds sent in 30 min", "Check your wallet"]'></textarea>
+                                    <small>Optional - Array of pay-out notification strings</small>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Send Request</button>
                                 <div class="response-section" style="display:none;"></div>
@@ -1040,12 +1010,19 @@ function getApiTesterHTML() {
                 if (method === 'GET') {
                     params.append(key, value);
                 } else {
-                    if (key === 'coinIds' || key === 'partners' || key === 'mappedPartners') {
-                        try {
-                            body[key] = JSON.parse(value);
-                        } catch (e) {
-                            body[key] = value;
+                    if (key === 'coinIds' || key === 'partners' || key === 'mappedPartners' || key === 'unstandardCoinIds' || key === 'notifications' || key === 'payInNotifications' || key === 'payOutNotifications') {
+                        // Only parse if value is not empty
+                        if (value && value.trim() !== '') {
+                            try {
+                                body[key] = JSON.parse(value);
+                            } catch (e) {
+                                body[key] = value;
+                            }
                         }
+                        // If empty, don't include in body (undefined)
+                    } else if (key === 'isApproved') {
+                        // Convert string "true"/"false" to boolean
+                        body[key] = value === 'true';
                     } else {
                         body[key] = value;
                     }

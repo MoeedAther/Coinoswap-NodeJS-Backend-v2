@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 class swapController {
   // This controller is responsible for updating swap coins into swap_crypto table
-  static updateCoins = async (req, res) => {
+  static addCoins = async (req, res) => {
     try {
       // ---------- API CALLS ----------
       // Changelly API
@@ -134,7 +134,7 @@ class swapController {
             requiresExtraId: c.extraIdName ? true : false,
             name: c.fullName,
             network: c.blockchain || c.name,
-            shortName: ticker.toLowerCase(),
+            shortName: c.ticker.toLowerCase(),
             image: c.image || null,
             swapPartner: "changelly",
             mappedPartners: [],
@@ -157,7 +157,7 @@ class swapController {
             requiresExtraId: c.isExtraIdSupported,
             name: c.name,
             network: c.network || c.ticker,
-            shortName: ticker.toLowerCase(),
+            shortName: c.ticker.toLowerCase(),
             image: c.image || null,
             swapPartner: "changenow",
             mappedPartners: [],
@@ -204,9 +204,8 @@ class swapController {
           if (networks.length > 0) {
             for (const network of networks) {
               let standardTicker =
-                c.code === network.network
-                  ? c.code.toLowerCase()
-                  : (c.code + network.network).toLowerCase();
+                c.code.toLowerCase() + network.network.toLowerCase();
+
               coins.push({
                 standardTicker: standardTicker,
                 ticker: c.code,
@@ -218,39 +217,23 @@ class swapController {
                 mappedPartners: [],
                 data: c,
                 coinType: "other",
-                isApproved: 0,
-                isStandard: 0,
+                isApproved: false,
+                isStandard: false,
               });
             }
-          } else {
-            // Fallback if no networks array
-            coins.push({
-              standardTicker: c.code.toLowerCase(),
-              ticker: c.code,
-              requiresExtraId: false,
-              name: c.name,
-              network: c.networkCode || c.code,
-              image: c.icon || null,
-              swapPartner: "exolix",
-              mappedPartners: [],
-              data: c,
-              coinType: "other",
-              isApproved: 0,
-              isStandard: 0,
-            });
           }
         }
       }
 
-      return res.json({ coins: exolixResp.data });
+      // return res.json({ coins: exolixResp.data });
 
       // Process StealthEX coins
       if (stealthexResp.data) {
         for (const c of stealthexResp.data) {
           coins.push({
-            standardTicker: c.symbol.toLowerCase(),
+            standardTicker: c.symbol.toLowerCase() + c.network.toLowerCase(),
             ticker: c.symbol,
-            requiresExtraId: c.has_extra_id,
+            requiresExtraId: c.has_extra_id ? true : false,
             name: c.name,
             network: c.network || c.symbol,
             image: c.image || null,
@@ -258,11 +241,13 @@ class swapController {
             mappedPartners: [],
             data: c,
             coinType: "other",
-            isApproved: 0,
-            isStandard: 0,
+            isApproved: false,
+            isStandard: false,
           });
         }
       }
+
+      // return res.json({ coins: stealthexResp.data });
 
       // Process Godex coins
       if (godexResp.data) {
@@ -271,9 +256,8 @@ class swapController {
           if (networks.length > 0) {
             for (const network of networks) {
               let standardTicker =
-                c.code === network.code
-                  ? c.code.toLowerCase()
-                  : (c.code + network.code).toLowerCase();
+                c.code.toLowerCase() + network.code.toLowerCase();
+
               coins.push({
                 standardTicker: standardTicker,
                 ticker: c.code,
@@ -285,55 +269,43 @@ class swapController {
                 mappedPartners: [],
                 data: c,
                 coinType: "other",
-                isApproved: 0,
-                isStandard: 0,
+                isApproved: false,
+                isStandard: false,
               });
             }
-          } else {
-            // Fallback if no networks array
-            coins.push({
-              standardTicker: c.code.toLowerCase(),
-              ticker: c.code,
-              requiresExtraId: false,
-              name: c.name,
-              network: c.default_network_code || c.code,
-              image: null,
-              swapPartner: "godex",
-              mappedPartners: [],
-              data: c,
-              coinType: "other",
-              isApproved: 0,
-              isStandard: 0,
-            });
           }
         }
       }
+
+      // return res.json({ coins: godexResp.data });
 
       // Process LetsExchange coins
       if (letsexchangeResp.data) {
         for (const c of letsexchangeResp.data) {
           coins.push({
-            standardTicker: c.code.toLowerCase(),
+            standardTicker: c.code.toLowerCase() + c.network_code.toLowerCase(),
             ticker: c.code,
             requiresExtraId: c.has_extra === 1 ? true : false,
             name: c.name,
-            network: c.network || c.code,
+            network: c.network_code || c.code,
             image: c.icon || null,
             swapPartner: "letsexchange",
             mappedPartners: [],
             data: c,
             coinType: "other",
-            isApproved: 0,
-            isStandard: 0,
+            isApproved: false,
+            isStandard: false,
           });
         }
       }
+
+      // return res.json({ coins: letsexchangeResp.data });
 
       // Process SimpleSwap coins
       if (simpleswapResp.data) {
         for (const c of simpleswapResp.data) {
           coins.push({
-            standardTicker: c.symbol.toLowerCase(),
+            standardTicker: c.symbol.toLowerCase() + c.network.toLowerCase(),
             ticker: c.symbol,
             requiresExtraId: c.has_extra_id,
             name: c.name,
@@ -343,8 +315,8 @@ class swapController {
             mappedPartners: [],
             data: c,
             coinType: "other",
-            isApproved: 0,
-            isStandard: 0,
+            isApproved: false,
+            isStandard: false,
           });
         }
       }
@@ -356,14 +328,12 @@ class swapController {
           if (networkList.length > 0) {
             for (const network of networkList) {
               let standardTicker =
-                c.currency === network.network
-                  ? c.currency.toLowerCase()
-                  : (c.currency + network.network).toLowerCase();
+                c.currency.toLowerCase() + network.network.toLowerCase();
 
               coins.push({
                 standardTicker: standardTicker,
                 ticker: c.currency,
-                requiresExtraId: c.hasTag,
+                requiresExtraId: network.hasTag,
                 name: c.name,
                 network: network.network,
                 image: null,
@@ -371,29 +341,15 @@ class swapController {
                 mappedPartners: [],
                 data: c,
                 coinType: "other",
-                isApproved: 0,
-                isStandard: 0,
+                isApproved: false,
+                isStandard: false,
               });
             }
-          } else {
-            // Fallback if no networkList
-            coins.push({
-              standardTicker: c.currency.toLowerCase(),
-              ticker: c.currency,
-              requiresExtraId: c.hasTag || false,
-              name: c.name,
-              network: c.currency,
-              image: null,
-              swapPartner: "easybit",
-              mappedPartners: [],
-              data: c,
-              coinType: "other",
-              isApproved: 0,
-              isStandard: 0,
-            });
           }
         }
       }
+
+      // return res.json({ coins: easybitResp.data });
 
       // ---------- EXTRACT ALL NETWORK NAMES ----------
       let allNetworks = new Set();
@@ -405,7 +361,7 @@ class swapController {
 
       // ---------- PROCESS SHORTNAME ----------
       for (const coin of coins) {
-        let coinName = coin.name || coin.ticker;
+        let coinName = coin.ticker;
         let shortName = coinName;
 
         // Check if coin name ends with any network name and remove it
@@ -448,12 +404,10 @@ class swapController {
           continue;
         }
 
-        const key = coin.standardTicker.toLowerCase();
+        const key = coin.standardTicker;
 
         if (coinKeys.has(key)) continue;
-        let alikeCoins = coins.filter(
-          (c) => c.standardTicker && c.network && c.standardTicker === key
-        );
+        let alikeCoins = coins.filter((c) => c.standardTicker === key);
 
         if (alikeCoins.length > 1) {
           let baseCoin = {
@@ -477,15 +431,15 @@ class swapController {
               network: a.network,
               coinType: a.coinType,
               requiresExtraId: a.requiresExtraId,
-              payInNotification: null,
-              payOutNotification: null,
+              payInNotifications: [],
+              payOutNotifications: [],
             });
           }
 
           baseCoin.swapPartner = null;
           baseCoin.data = null;
-          baseCoin.isStandard = 1;
-          baseCoin.isApproved = 1; // Standard coins are approved by default
+          baseCoin.isStandard = true;
+          baseCoin.isApproved = true; // Standard coins are approved by default
           baseCoin.requiresExtraId = requiresExtraIdFlag;
 
           coinKeys.add(key);
@@ -504,7 +458,6 @@ class swapController {
         const coin = await prisma.swap_crypto.findMany({
           where: {
             standardTicker: m.standardTicker,
-            network: m.network,
             isStandard: true,
           },
         });
@@ -541,16 +494,20 @@ class swapController {
           await prisma.swap_crypto.create({
             data: {
               standardTicker: m.standardTicker,
+              ticker: m.ticker.toLowerCase(),
               name: m.name,
               network: m.network,
-              shortName: m.shortName || m.name,
+              shortName:
+                m.shortName && m.shortName.length > 1
+                  ? m.shortName.toLowerCase()
+                  : m.ticker.toLowerCase(),
               image: m.image,
               swapPartner: m.swapPartner,
               mappedPartners: JSON.stringify(m.mappedPartners),
               coinType: m.coinType || "other",
               requiresExtraId: m.requiresExtraId,
-              isApproved: m.isApproved === 1,
-              isStandard: m.isStandard === 1,
+              isApproved: true,
+              isStandard: true,
             },
           });
           insertedStandard++;
@@ -560,15 +517,14 @@ class swapController {
       // ---------- PROCESS NON-STANDARD COINS ----------
       for (const c of coins) {
         // Skip coins that are part of standard coins
-        const key = c.standardTicker.toLowerCase() + c.network.toLowerCase();
-        if (standardCoinKeys.has(key)) {
-          continue;
-        }
+        // const key = c.standardTicker;
+        // if (standardCoinKeys.has(key)) {
+        //   continue;
+        // }
 
         const coin = await prisma.swap_crypto.findMany({
           where: {
             standardTicker: c.standardTicker,
-            network: c.network,
             swapPartner: c.swapPartner,
             isStandard: false,
           },
@@ -578,16 +534,20 @@ class swapController {
           await prisma.swap_crypto.create({
             data: {
               standardTicker: c.standardTicker,
+              ticker: c.ticker.toLowerCase(),
               name: c.name,
               network: c.network,
-              shortName: c.shortName || c.name,
+              shortName:
+                c.shortName && c.shortName.length > 1
+                  ? c.shortName.toLowerCase()
+                  : c.ticker.toLowerCase(),
               image: c.image,
               swapPartner: c.swapPartner,
               data: JSON.stringify(c.data),
               coinType: c.coinType || "other",
               requiresExtraId: c.requiresExtraId,
-              isApproved: c.isApproved === 1,
-              isStandard: c.isStandard === 1,
+              isApproved: false,
+              isStandard: false,
             },
           });
 
@@ -607,312 +567,11 @@ class swapController {
         totalUpdated: updatedStandard,
       });
     } catch (error) {
-      console.log(error);
       // ---------- ERROR HANDLING ----------
       return res.status(500).json({
         success: false,
         error: error.message || "Unexpected server error",
         message: "Something went wrong while processing coin data",
-      });
-    }
-  };
-
-  // This controller is responsible for adding and deleting coins from standard coins
-  static addAndDeleteCoin = async (req, res) => {
-    try {
-      const { action, standardCoinId, unstandardCoinId, partnerName } =
-        req.body;
-
-      // ---------- VALIDATE INPUT ----------
-      if (!action || !standardCoinId) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Missing required fields: action and standardCoinId are required",
-        });
-      }
-
-      if (!["add", "delete"].includes(action)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid action. Must be 'add' or 'delete'",
-        });
-      }
-
-      if (action === "add" && !unstandardCoinId) {
-        return res.status(400).json({
-          success: false,
-          message: "unstandardCoinId is required for add action",
-        });
-      }
-
-      if (action === "delete" && !partnerName) {
-        return res.status(400).json({
-          success: false,
-          message: "partnerName is required for delete action",
-        });
-      }
-
-      // ---------- FETCH STANDARD COIN ----------
-      const standardCoin = await prisma.swap_crypto.findFirst({
-        where: {
-          id: parseInt(standardCoinId),
-          isStandard: true,
-        },
-      });
-
-      if (!standardCoin) {
-        return res.status(404).json({
-          success: false,
-          message: "Standard coin not found",
-        });
-      }
-
-      let mappedPartners = JSON.parse(standardCoin.mappedPartners || "[]");
-
-      // ---------- ADD COIN TO MAPPED PARTNERS ----------
-      if (action === "add") {
-        const unstandardCoin = await prisma.swap_crypto.findFirst({
-          where: {
-            id: parseInt(unstandardCoinId),
-            isStandard: false,
-          },
-        });
-
-        if (!unstandardCoin) {
-          return res.status(404).json({
-            success: false,
-            message: "Unstandard coin not found",
-          });
-        }
-
-        const coin = unstandardCoin;
-
-        // Check if already exists in mappedPartners
-        const alreadyExists = mappedPartners.some(
-          (mp) => mp.swapPartner === coin.swapPartner
-        );
-
-        if (alreadyExists) {
-          return res.status(400).json({
-            success: false,
-            message: `Partner '${coin.swapPartner}' already exists in mappedPartners`,
-          });
-        }
-
-        // Add to mappedPartners
-        mappedPartners.push({
-          swapPartner: coin.swapPartner,
-          standardTicker: coin.standardTicker,
-          ticker: coin.ticker,
-          name: coin.name,
-          network: coin.network,
-          coinType: coin.coinType,
-          requiresExtraId: coin.requiresExtraId,
-        });
-
-        // Check if any partner requires extra ID
-        const requiresExtraIdFlag = mappedPartners.some(
-          (mp) => mp.requiresExtraId === true
-        );
-
-        await prisma.swap_crypto.update({
-          where: { id: parseInt(standardCoinId) },
-          data: {
-            mappedPartners: JSON.stringify(mappedPartners),
-            requiresExtraId: requiresExtraIdFlag,
-          },
-        });
-
-        return res.status(200).json({
-          success: true,
-          message: `Successfully added ${coin.swapPartner} to standard coin`,
-          mappedPartners,
-        });
-      }
-
-      // ---------- DELETE COIN FROM MAPPED PARTNERS ----------
-      if (action === "delete") {
-        const updatedPartners = mappedPartners.filter(
-          (mp) => mp.swapPartner !== partnerName
-        );
-
-        if (updatedPartners.length === mappedPartners.length) {
-          return res.status(404).json({
-            success: false,
-            message: `Partner '${partnerName}' not found in mappedPartners`,
-          });
-        }
-
-        // Recalculate requiresExtraId after deletion
-        const requiresExtraIdFlag = updatedPartners.some(
-          (mp) => mp.requiresExtraId === true
-        );
-
-        await prisma.swap_crypto.update({
-          where: { id: parseInt(standardCoinId) },
-          data: {
-            mappedPartners: JSON.stringify(updatedPartners),
-            requiresExtraId: requiresExtraIdFlag,
-          },
-        });
-
-        return res.status(200).json({
-          success: true,
-          message: `Successfully removed ${partnerName} from standard coin`,
-          mappedPartners: updatedPartners,
-        });
-      }
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: error.message || "Unexpected server error",
-        message: "Something went wrong while processing add/delete operation",
-      });
-    }
-  };
-
-  // This controller is responsible for standardizing coins
-  static standardizeCoin = async (req, res) => {
-    try {
-      const { coinIds } = req.body;
-
-      // ---------- VALIDATE INPUT ----------
-      if (!coinIds || !Array.isArray(coinIds) || coinIds.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "coinIds array is required and must not be empty",
-        });
-      }
-
-      // ---------- FETCH ALL COINS ----------
-      const coins = await prisma.swap_crypto.findMany({
-        where: {
-          id: { in: coinIds.map((id) => parseInt(id)) },
-          isStandard: false,
-        },
-      });
-
-      if (coins.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "No unstandard coins found with provided IDs",
-        });
-      }
-
-      // ---------- USE FIRST COIN AS BASE ----------
-      const firstCoin = coins[0];
-
-      let mappedPartners = [];
-      let requiresExtraIdFlag = false;
-
-      // ---------- BUILD MAPPED PARTNERS FROM SELECTED COINS ----------
-      for (const coin of coins) {
-        mappedPartners.push({
-          swapPartner: coin.swapPartner,
-          standardTicker: coin.standardTicker,
-          ticker: coin.ticker,
-          name: coin.name,
-          network: coin.network,
-          coinType: coin.coinType,
-          requiresExtraId: coin.requiresExtraId,
-          payInNotification: null,
-          payOutNotification: null,
-        });
-
-        // Check if any coin requires extra ID
-        if (coin.requiresExtraId === true) {
-          requiresExtraIdFlag = true;
-        }
-      }
-
-      // ---------- CREATE NEW STANDARD COIN ----------
-      const result = await prisma.swap_crypto.create({
-        data: {
-          standardTicker: firstCoin.standardTicker,
-          name: firstCoin.name,
-          network: firstCoin.network,
-          shortName: firstCoin.shortName || firstCoin.name,
-          image: firstCoin.image,
-          swapPartner: null,
-          mappedPartners: JSON.stringify(mappedPartners),
-          coinType: firstCoin.coinType || "other",
-          requiresExtraId: requiresExtraIdFlag,
-          isApproved: true,
-          isStandard: true,
-        },
-      });
-      const standardCoinId = result.id;
-
-      return res.status(200).json({
-        success: true,
-        message: `Successfully standardized ${coins.length} coin(s)`,
-        standardCoinId,
-        mappedPartners,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: error.message || "Unexpected server error",
-        message: "Something went wrong while standardizing coins",
-      });
-    }
-  };
-
-  // This controller is responsible for destandardizing coins
-  static destandardizeCoin = async (req, res) => {
-    try {
-      const { standardCoinId } = req.body;
-
-      // ---------- VALIDATE INPUT ----------
-      if (!standardCoinId) {
-        return res.status(400).json({
-          success: false,
-          message: "standardCoinId is required",
-        });
-      }
-
-      // ---------- FETCH STANDARD COIN ----------
-      const standardCoin = await prisma.swap_crypto.findFirst({
-        where: {
-          id: parseInt(standardCoinId),
-          isStandard: true,
-        },
-      });
-
-      if (!standardCoin) {
-        return res.status(404).json({
-          success: false,
-          message: "Standard coin not found",
-        });
-      }
-
-      const coin = standardCoin;
-      const mappedPartners = JSON.parse(coin.mappedPartners || "[]");
-
-      if (mappedPartners.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Standard coin has no mapped partners to destandardize",
-        });
-      }
-
-      // ---------- DELETE STANDARD COIN ----------
-      await prisma.swap_crypto.delete({
-        where: { id: parseInt(standardCoinId) },
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: `Successfully destandardized coin. The standard coin has been removed.`,
-        deletedStandardCoinId: standardCoinId,
-        releasedPartnersCount: mappedPartners.length,
-      });
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: error.message || "Unexpected server error",
-        message: "Something went wrong while destandardizing coin",
       });
     }
   };
@@ -975,8 +634,9 @@ class swapController {
   // This controller is responsible for updating standard coin data
   static updateStandardCoin = async (req, res) => {
     try {
-      const { standardCoinId, shortName, coinType, image, mappedPartners } =
-        req.body;
+      const { standardCoinId, shortName, coinType, image } = req.body;
+
+      console.log(req.body);
 
       // ---------- VALIDATE INPUT ----------
       if (!standardCoinId) {
@@ -987,7 +647,7 @@ class swapController {
       }
 
       // Validate coinType if provided
-      const validCoinTypes = ["stable", "stable&popular", "other"];
+      const validCoinTypes = ["popular", "popular&stable", "other"];
       if (coinType && !validCoinTypes.includes(coinType)) {
         return res.status(400).json({
           success: false,
@@ -1013,37 +673,12 @@ class swapController {
       }
 
       const coin = standardCoin;
-      let currentMappedPartners = JSON.parse(coin.mappedPartners || "[]");
-
-      // ---------- UPDATE MAPPED PARTNERS PAYIN/PAYOUT ----------
-      if (mappedPartners && Array.isArray(mappedPartners)) {
-        for (const updatedPartner of mappedPartners) {
-          const partnerIndex = currentMappedPartners.findIndex(
-            (mp) => mp.swapPartner === updatedPartner.swapPartner
-          );
-
-          if (partnerIndex !== -1) {
-            // Update payInNotification and payOutNotification
-            if (updatedPartner.payInNotification !== undefined) {
-              currentMappedPartners[partnerIndex].payInNotification =
-                updatedPartner.payInNotification;
-            }
-            if (updatedPartner.payOutNotification !== undefined) {
-              currentMappedPartners[partnerIndex].payOutNotification =
-                updatedPartner.payOutNotification;
-            }
-          }
-        }
-      }
 
       // ---------- BUILD UPDATE DATA ----------
       const updateData = {};
       if (shortName !== undefined) updateData.shortName = shortName;
       if (coinType !== undefined) updateData.coinType = coinType;
       if (image !== undefined) updateData.image = image;
-      if (mappedPartners && Array.isArray(mappedPartners)) {
-        updateData.mappedPartners = JSON.stringify(currentMappedPartners);
-      }
 
       if (Object.keys(updateData).length === 0) {
         return res.status(400).json({
@@ -1068,19 +703,20 @@ class swapController {
         success: true,
         message: "Standard coin updated successfully",
         coin: {
-          id: updatedCoin[0].id,
-          standardTicker: updatedCoin[0].standardTicker,
-          name: updatedCoin[0].name,
-          network: updatedCoin[0].network,
-          shortName: updatedCoin[0].shortName,
-          image: updatedCoin[0].image,
-          coinType: updatedCoin[0].coinType,
-          requiresExtraId: updatedCoin[0].requiresExtraId,
-          isApproved: updatedCoin[0].isApproved,
-          mappedPartners: JSON.parse(updatedCoin[0].mappedPartners || "[]"),
+          id: updatedCoin.id,
+          standardTicker: updatedCoin.standardTicker,
+          name: updatedCoin.name,
+          network: updatedCoin.network,
+          shortName: updatedCoin.shortName,
+          image: updatedCoin.image,
+          coinType: updatedCoin.coinType,
+          requiresExtraId: updatedCoin.requiresExtraId,
+          isApproved: updatedCoin.isApproved,
+          mappedPartners: JSON.parse(updatedCoin.mappedPartners || "[]"),
         },
       });
     } catch (error) {
+      console.log(error);
       return res.status(500).json({
         success: false,
         error: error.message || "Unexpected server error",
@@ -1089,19 +725,485 @@ class swapController {
     }
   };
 
-  // This controller is responsible for searching of standard and unstandard coins
-  static searchCoins = async (req, res) => {
+  // This controller is responsible for approving/disapproving coins
+  static updateCoinApprovalStatus = async (req, res) => {
     try {
-      const { ticker, isStandard, page = 1, limit = 10 } = req.query;
+      const { coinId, isApproved } = req.body;
 
       // ---------- VALIDATE INPUT ----------
-      if (!ticker || ticker.trim() === "") {
+      if (!coinId) {
         return res.status(400).json({
           success: false,
-          message: "ticker parameter is required for search",
+          message: "coinId is required",
         });
       }
 
+      if (isApproved === undefined || isApproved === null) {
+        return res.status(400).json({
+          success: false,
+          message: "isApproved is required (true or false)",
+        });
+      }
+
+      // Validate isApproved is boolean
+      if (typeof isApproved !== "boolean") {
+        return res.status(400).json({
+          success: false,
+          message: "isApproved must be a boolean value (true or false)",
+        });
+      }
+
+      // ---------- FETCH COIN ----------
+      const coin = await prisma.swap_crypto.findUnique({
+        where: { id: parseInt(coinId) },
+      });
+
+      if (!coin) {
+        return res.status(404).json({
+          success: false,
+          message: "Coin not found",
+        });
+      }
+
+      // ---------- UPDATE COIN APPROVAL STATUS ----------
+      const updatedCoin = await prisma.swap_crypto.update({
+        where: { id: parseInt(coinId) },
+        data: {
+          isApproved: isApproved,
+        },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Coin ${isApproved ? "approved" : "disapproved"} successfully`,
+        coin: {
+          id: updatedCoin.id,
+          standardTicker: updatedCoin.standardTicker,
+          ticker: updatedCoin.ticker,
+          name: updatedCoin.name,
+          network: updatedCoin.network,
+          isApproved: updatedCoin.isApproved,
+          isStandard: updatedCoin.isStandard,
+          swapPartner: updatedCoin.swapPartner,
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Unexpected server error",
+        message: "Something went wrong while updating coin approval status",
+      });
+    }
+  };
+
+  // This controller merges coins (both standard and unstandard) into a target standard coin's mappedPartners
+  static mergeCoinsToMappedPartners = async (req, res) => {
+    try {
+      const { standardCoinId, coinIds } = req.body;
+
+      // ---------- VALIDATE INPUT ----------
+      if (!standardCoinId) {
+        return res.status(400).json({
+          success: false,
+          message: "standardCoinId is required",
+        });
+      }
+
+      if (!coinIds || !Array.isArray(coinIds) || coinIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "coinIds array is required and must not be empty",
+        });
+      }
+
+      // ---------- FETCH TARGET STANDARD COIN ----------
+      const targetCoin = await prisma.swap_crypto.findFirst({
+        where: {
+          id: parseInt(standardCoinId),
+          isStandard: true,
+        },
+      });
+
+      if (!targetCoin) {
+        return res.status(404).json({
+          success: false,
+          message: "Target standard coin not found",
+        });
+      }
+
+      // ---------- FETCH ALL COINS BY IDS ----------
+      const coins = await prisma.swap_crypto.findMany({
+        where: {
+          id: { in: coinIds.map((id) => parseInt(id)) },
+        },
+      });
+
+      if (coins.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No coins found with the provided IDs",
+        });
+      }
+
+      // ---------- SEPARATE STANDARD AND UNSTANDARD COINS ----------
+      const standardCoins = coins.filter((coin) => coin.isStandard === true);
+      const unstandardCoins = coins.filter((coin) => coin.isStandard === false);
+
+      // ---------- GET CURRENT MAPPED PARTNERS ----------
+      let currentMappedPartners = JSON.parse(
+        targetCoin.mappedPartners || "[]"
+      );
+      let addedFromStandardCount = 0;
+      let addedFromUnstandardCount = 0;
+      let skippedCount = 0;
+      let addedPartners = [];
+      let skippedPartners = [];
+      let disapprovedStandardCoins = [];
+
+      // ---------- MERGE MAPPED PARTNERS FROM STANDARD COINS ----------
+      for (const standardCoin of standardCoins) {
+        const sourceMappedPartners = JSON.parse(
+          standardCoin.mappedPartners || "[]"
+        );
+
+        for (const partner of sourceMappedPartners) {
+          // Check if this partner already exists in target's mappedPartners
+          const existingPartner = currentMappedPartners.find(
+            (mp) => mp.swapPartner === partner.swapPartner
+          );
+
+          if (!existingPartner) {
+            // Copy complete partner object from source coin
+            currentMappedPartners.push({
+              ...partner,
+            });
+            addedFromStandardCount++;
+            addedPartners.push(partner.swapPartner);
+          } else {
+            skippedCount++;
+            skippedPartners.push(partner.swapPartner);
+          }
+        }
+
+        // Set source standard coin's isApproved to false
+        await prisma.swap_crypto.update({
+          where: { id: standardCoin.id },
+          data: { isApproved: false },
+        });
+
+        disapprovedStandardCoins.push({
+          id: standardCoin.id,
+          standardTicker: standardCoin.standardTicker,
+          name: standardCoin.name,
+        });
+      }
+
+      // ---------- ADD UNSTANDARD COINS TO MAPPED PARTNERS ----------
+      for (const unstandardCoin of unstandardCoins) {
+        // Check if this partner already exists in mappedPartners
+        const existingPartner = currentMappedPartners.find(
+          (mp) => mp.swapPartner === unstandardCoin.swapPartner
+        );
+
+        if (!existingPartner) {
+          // Create mapped partner object from unstandard coin
+          currentMappedPartners.push({
+            swapPartner: unstandardCoin.swapPartner,
+            standardTicker: unstandardCoin.standardTicker,
+            ticker: unstandardCoin.ticker,
+            name: unstandardCoin.name,
+            network: unstandardCoin.network,
+            coinType: unstandardCoin.coinType || "other",
+            requiresExtraId: unstandardCoin.requiresExtraId,
+            payInNotifications: [],
+            payOutNotifications: [],
+          });
+          addedFromUnstandardCount++;
+          addedPartners.push(unstandardCoin.swapPartner);
+        } else {
+          skippedCount++;
+          skippedPartners.push(unstandardCoin.swapPartner);
+        }
+      }
+
+      // ---------- HANDLE CASE WHERE NO NEW PARTNERS WERE ADDED ----------
+      const totalAdded = addedFromStandardCount + addedFromUnstandardCount;
+      if (totalAdded === 0) {
+        return res.status(200).json({
+          success: true,
+          message:
+            "No new partners were added (all already exist in mappedPartners)",
+          addedFromStandardCount: 0,
+          addedFromUnstandardCount: 0,
+          totalAdded: 0,
+          skippedCount,
+          skippedPartners,
+          disapprovedStandardCoins:
+            disapprovedStandardCoins.length > 0
+              ? disapprovedStandardCoins
+              : undefined,
+          coin: {
+            id: targetCoin.id,
+            standardTicker: targetCoin.standardTicker,
+            name: targetCoin.name,
+            network: targetCoin.network,
+            mappedPartners: currentMappedPartners,
+          },
+        });
+      }
+
+      // ---------- UPDATE TARGET STANDARD COIN WITH NEW MAPPED PARTNERS ----------
+      await prisma.swap_crypto.update({
+        where: { id: parseInt(standardCoinId) },
+        data: {
+          mappedPartners: JSON.stringify(currentMappedPartners),
+        },
+      });
+
+      // ---------- FETCH UPDATED COIN ----------
+      const updatedCoin = await prisma.swap_crypto.findUnique({
+        where: { id: parseInt(standardCoinId) },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Successfully merged ${totalAdded} partner${
+          totalAdded !== 1 ? "s" : ""
+        } to mapped partners (${addedFromStandardCount} from standard coins, ${addedFromUnstandardCount} from unstandard coins)`,
+        addedFromStandardCount,
+        addedFromUnstandardCount,
+        totalAdded,
+        skippedCount,
+        addedPartners,
+        skippedPartners:
+          skippedPartners.length > 0 ? skippedPartners : undefined,
+        disapprovedStandardCoins:
+          disapprovedStandardCoins.length > 0
+            ? disapprovedStandardCoins
+            : undefined,
+        coin: {
+          id: updatedCoin.id,
+          standardTicker: updatedCoin.standardTicker,
+          name: updatedCoin.name,
+          network: updatedCoin.network,
+          mappedPartners: JSON.parse(updatedCoin.mappedPartners || "[]"),
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Unexpected server error",
+        message: "Something went wrong while merging coins to mapped partners",
+      });
+    }
+  };
+
+  // This controller is responsible for updating notifications in mappedPartners
+  static updateMappedPartnersNotifications = async (req, res) => {
+    try {
+      const {
+        standardCoinId,
+        swapPartner,
+        payInNotifications,
+        payOutNotifications,
+      } = req.body;
+
+      // ---------- VALIDATE INPUT ----------
+      if (!standardCoinId) {
+        return res.status(400).json({
+          success: false,
+          message: "standardCoinId is required",
+        });
+      }
+
+      if (!swapPartner) {
+        return res.status(400).json({
+          success: false,
+          message: "swapPartner is required",
+        });
+      }
+
+      // At least one notification array must be provided
+      if (
+        payInNotifications === undefined &&
+        payOutNotifications === undefined
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "At least one of payInNotifications or payOutNotifications must be provided",
+        });
+      }
+
+      // Validate payInNotifications if provided
+      if (payInNotifications !== undefined && payInNotifications !== null) {
+        if (!Array.isArray(payInNotifications)) {
+          return res.status(400).json({
+            success: false,
+            message: "payInNotifications must be an array",
+          });
+        }
+      }
+
+      // Validate payOutNotifications if provided
+      if (payOutNotifications !== undefined && payOutNotifications !== null) {
+        if (!Array.isArray(payOutNotifications)) {
+          return res.status(400).json({
+            success: false,
+            message: "payOutNotifications must be an array",
+          });
+        }
+      }
+
+      // ---------- FETCH STANDARD COIN ----------
+      const standardCoin = await prisma.swap_crypto.findFirst({
+        where: {
+          id: parseInt(standardCoinId),
+          isStandard: true,
+        },
+      });
+
+      if (!standardCoin) {
+        return res.status(404).json({
+          success: false,
+          message: "Standard coin not found",
+        });
+      }
+
+      // ---------- UPDATE MAPPED PARTNER NOTIFICATIONS ----------
+      let currentMappedPartners = JSON.parse(
+        standardCoin.mappedPartners || "[]"
+      );
+
+      const partnerIndex = currentMappedPartners.findIndex(
+        (mp) => mp.swapPartner === swapPartner
+      );
+
+      if (partnerIndex === -1) {
+        return res.status(404).json({
+          success: false,
+          message: `Partner '${swapPartner}' not found in mappedPartners`,
+        });
+      }
+
+      // Remove old notification fields if they exist
+      delete currentMappedPartners[partnerIndex].payInNotification;
+      delete currentMappedPartners[partnerIndex].payOutNotification;
+
+      // Initialize notification arrays if they don't exist
+      if (!currentMappedPartners[partnerIndex].payInNotifications) {
+        currentMappedPartners[partnerIndex].payInNotifications = [];
+      }
+      if (!currentMappedPartners[partnerIndex].payOutNotifications) {
+        currentMappedPartners[partnerIndex].payOutNotifications = [];
+      }
+
+      // Update payInNotifications if provided
+      if (payInNotifications !== undefined) {
+        currentMappedPartners[partnerIndex].payInNotifications =
+          payInNotifications;
+      }
+
+      // Update payOutNotifications if provided
+      if (payOutNotifications !== undefined) {
+        currentMappedPartners[partnerIndex].payOutNotifications =
+          payOutNotifications;
+      }
+
+      // ---------- UPDATE STANDARD COIN ----------
+      await prisma.swap_crypto.update({
+        where: { id: parseInt(standardCoinId) },
+        data: {
+          mappedPartners: JSON.stringify(currentMappedPartners),
+        },
+      });
+
+      // ---------- FETCH UPDATED COIN ----------
+      const updatedCoin = await prisma.swap_crypto.findUnique({
+        where: { id: parseInt(standardCoinId) },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Notifications updated successfully for partner '${swapPartner}'`,
+        updatedPartner: {
+          swapPartner: currentMappedPartners[partnerIndex].swapPartner,
+          payInNotifications:
+            currentMappedPartners[partnerIndex].payInNotifications,
+          payOutNotifications:
+            currentMappedPartners[partnerIndex].payOutNotifications,
+        },
+        coin: {
+          id: updatedCoin.id,
+          standardTicker: updatedCoin.standardTicker,
+          name: updatedCoin.name,
+          network: updatedCoin.network,
+          mappedPartners: JSON.parse(updatedCoin.mappedPartners || "[]"),
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Unexpected server error",
+        message: "Something went wrong while updating notifications",
+      });
+    }
+  };
+
+  // This controller is responsible for deleting standard coins
+  static deleteStandardCoin = async (req, res) => {
+    try {
+      const { standardCoinId } = req.body;
+
+      // ---------- VALIDATE INPUT ----------
+      if (!standardCoinId) {
+        return res.status(400).json({
+          success: false,
+          message: "standardCoinId is required",
+        });
+      }
+
+      // ---------- FETCH STANDARD COIN ----------
+      const standardCoin = await prisma.swap_crypto.findFirst({
+        where: {
+          id: parseInt(standardCoinId),
+          isStandard: true,
+        },
+      });
+
+      if (!standardCoin) {
+        return res.status(404).json({
+          success: false,
+          message: "Standard coin not found",
+        });
+      }
+
+      // ---------- DELETE STANDARD COIN ----------
+      await prisma.swap_crypto.delete({
+        where: { id: parseInt(standardCoinId) },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Successfully destandardized coin. The standard coin has been removed.`,
+        deletedStandardCoinId: standardCoinId,
+        releasedPartnersCount: mappedPartners.length,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message || "Unexpected server error",
+        message: "Something went wrong while destandardizing coin",
+      });
+    }
+  };
+
+  // This controller is responsible for searching of standard and unstandard coins
+  static searchCoins = async (req, res) => {
+    try {
+      const { searchTerm, isStandard, page = 1, limit = 10 } = req.query;
+
+      // ---------- VALIDATE INPUT ----------
       if (
         isStandard === undefined ||
         isStandard === null ||
@@ -1116,37 +1218,167 @@ class swapController {
       const pageNum = parseInt(page);
       const limitNum = parseInt(limit);
       const offset = (pageNum - 1) * limitNum;
-      const isStandardValue = parseInt(isStandard);
+      const isStandardValue = parseInt(isStandard) === 1;
 
-      // ---------- BUILD COUNT QUERY ----------
-      let countQuery =
-        "SELECT COUNT(*) as total FROM swap_crypto WHERE standardTicker LIKE ? AND isStandard=?";
-      const searchPattern = `%${ticker}%`;
+      // ---------- BUILD WHERE CLAUSE ----------
+      const whereClause = {
+        isStandard: isStandardValue,
+      };
 
-      // ---------- BUILD DATA QUERY ----------
-      let dataQuery =
-        "SELECT * FROM swap_crypto WHERE standardTicker LIKE ? AND isStandard=? ORDER BY " +
-        "CASE WHEN standardTicker = ? THEN 0 ELSE 1 END, " + // Exact match first
-        "standardTicker ASC " + // Then alphabetically
-        "LIMIT ? OFFSET ?";
+      // Add search term filter if provided
+      // Note: MySQL is case-insensitive by default for LIKE operations
+      if (searchTerm && searchTerm.trim() !== "") {
+        whereClause.OR = [
+          {
+            ticker: {
+              contains: searchTerm.trim(),
+            },
+          },
+          {
+            name: {
+              contains: searchTerm.trim(),
+            },
+          },
+          {
+            network: {
+              contains: searchTerm.trim(),
+            },
+          },
+        ];
+      }
 
       // ---------- EXECUTE QUERIES ----------
-      const [countResult] = await query(countQuery, [
-        searchPattern,
-        isStandardValue,
-      ]);
-      const totalCoins = countResult.total;
+      const totalCoins = await prisma.swap_crypto.count({
+        where: whereClause,
+      });
 
-      const coins = await query(dataQuery, [
-        searchPattern,
-        isStandardValue,
-        ticker, // For exact match priority
-        limitNum,
-        offset,
-      ]);
+      const coins = await prisma.swap_crypto.findMany({
+        where: whereClause,
+        orderBy: [
+          {
+            coinType: "asc", // This won't give exact priority, but we'll sort in memory
+          },
+          {
+            ticker: "asc",
+          },
+        ],
+        skip: offset,
+        take: limitNum,
+      });
+
+      // ---------- SORT WITH PRIORITY ----------
+      // Priority: coinType > exact match > starts with > alphabetical
+      let sortedCoins = coins;
+      if (searchTerm && searchTerm.trim() !== "") {
+        const searchTermLower = searchTerm.trim().toLowerCase();
+        sortedCoins = coins.sort((a, b) => {
+          // 1. coinType priority
+          const coinTypeOrder = {
+            popular: 0,
+            "popular&stable": 1,
+            stable: 2,
+            other: 3,
+          };
+          const aCoinTypeOrder = coinTypeOrder[a.coinType] ?? 4;
+          const bCoinTypeOrder = coinTypeOrder[b.coinType] ?? 4;
+          if (aCoinTypeOrder !== bCoinTypeOrder)
+            return aCoinTypeOrder - bCoinTypeOrder;
+
+          const aTickerLower = a.ticker.toLowerCase();
+          const bTickerLower = b.ticker.toLowerCase();
+          const aNameLower = (a.name || "").toLowerCase();
+          const bNameLower = (b.name || "").toLowerCase();
+          const aNetworkLower = (a.network || "").toLowerCase();
+          const bNetworkLower = (b.network || "").toLowerCase();
+
+          // 2. Exact ticker match
+          if (
+            aTickerLower === searchTermLower &&
+            bTickerLower !== searchTermLower
+          )
+            return -1;
+          if (
+            aTickerLower !== searchTermLower &&
+            bTickerLower === searchTermLower
+          )
+            return 1;
+
+          // 3. Exact name match
+          if (aNameLower === searchTermLower && bNameLower !== searchTermLower)
+            return -1;
+          if (aNameLower !== searchTermLower && bNameLower === searchTermLower)
+            return 1;
+
+          // 4. Exact network match
+          if (
+            aNetworkLower === searchTermLower &&
+            bNetworkLower !== searchTermLower
+          )
+            return -1;
+          if (
+            aNetworkLower !== searchTermLower &&
+            bNetworkLower === searchTermLower
+          )
+            return 1;
+
+          // 5. Ticker starts with search term
+          if (
+            aTickerLower.startsWith(searchTermLower) &&
+            !bTickerLower.startsWith(searchTermLower)
+          )
+            return -1;
+          if (
+            !aTickerLower.startsWith(searchTermLower) &&
+            bTickerLower.startsWith(searchTermLower)
+          )
+            return 1;
+
+          // 6. Name starts with search term
+          if (
+            aNameLower.startsWith(searchTermLower) &&
+            !bNameLower.startsWith(searchTermLower)
+          )
+            return -1;
+          if (
+            !aNameLower.startsWith(searchTermLower) &&
+            bNameLower.startsWith(searchTermLower)
+          )
+            return 1;
+
+          // 7. Network starts with search term
+          if (
+            aNetworkLower.startsWith(searchTermLower) &&
+            !bNetworkLower.startsWith(searchTermLower)
+          )
+            return -1;
+          if (
+            !aNetworkLower.startsWith(searchTermLower) &&
+            bNetworkLower.startsWith(searchTermLower)
+          )
+            return 1;
+
+          // 8. Default alphabetical sort
+          return aTickerLower.localeCompare(bTickerLower);
+        });
+      } else {
+        // Sort by coinType priority when no search term
+        const coinTypeOrder = {
+          popular: 0,
+          "popular&stable": 1,
+          stable: 2,
+          other: 3,
+        };
+        sortedCoins = coins.sort((a, b) => {
+          const aCoinTypeOrder = coinTypeOrder[a.coinType] ?? 4;
+          const bCoinTypeOrder = coinTypeOrder[b.coinType] ?? 4;
+          if (aCoinTypeOrder !== bCoinTypeOrder)
+            return aCoinTypeOrder - bCoinTypeOrder;
+          return a.ticker.toLowerCase().localeCompare(b.ticker.toLowerCase());
+        });
+      }
 
       // ---------- PARSE MAPPED PARTNERS ----------
-      const parsedCoins = coins.map((coin) => ({
+      const parsedCoins = sortedCoins.map((coin) => ({
         ...coin,
         mappedPartners: coin.mappedPartners
           ? JSON.parse(coin.mappedPartners)
@@ -1158,11 +1390,15 @@ class swapController {
 
       return res.status(200).json({
         success: true,
-        totalCoins,
-        totalPages,
-        currentPage: pageNum,
-        returnedCount: parsedCoins.length,
         coins: parsedCoins,
+        pagination: {
+          currentPage: pageNum,
+          totalPages: totalPages,
+          totalCount: totalCoins,
+          limit: limitNum,
+          hasNextPage: pageNum < totalPages,
+          hasPreviousPage: pageNum > 1,
+        },
       });
     } catch (error) {
       return res.status(500).json({

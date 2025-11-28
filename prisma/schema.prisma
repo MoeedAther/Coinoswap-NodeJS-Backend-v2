@@ -31,6 +31,7 @@ model buy_crypto {
 model swap_crypto {
   id              Int      @id @default(autoincrement())
   standardTicker  String   @db.VarChar(50)
+  ticker          String   @db.VarChar(100)
   name            String   @db.VarChar(100)
   network         String?  @db.VarChar(50)
   shortName       String?  @db.VarChar(100)

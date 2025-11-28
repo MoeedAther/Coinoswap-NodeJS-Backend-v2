@@ -19,11 +19,6 @@ router.post("/2fa/disable", adminController.disable2FA);
 router.post("/change-password", adminController.changePassword);
 
 // ...................................... Admin Settings Management .........................................../
-// Partners Settings
-router.get("/settings/partners", settingsController.getPartners);
-router.put("/settings/partners", settingsController.updatePartners);
-router.post("/settings/partners/toggle", settingsController.togglePartner);
-
 // General Settings
 router.get("/settings", settingsController.getAllSettings);
 router.get("/settings/:key", settingsController.getSetting);

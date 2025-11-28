@@ -181,17 +181,30 @@ router.post("/tx/status", exchangeController.checkTransactionStatus);
 
 // ...................................... Buy Currencies .........................................../
 router.get("/buy/update-coins", buyCryptoController.updateCoins);
-router.post("/buy/create-standard-coin", buyCryptoController.createStandardCoin);
+router.post(
+  "/buy/create-standard-coin",
+  buyCryptoController.createStandardCoin
+);
 router.post("/buy/add-delete-coins", buyCryptoController.addAndDeleteCoin);
 router.get("/buy/search-coins", buyCryptoController.searchCoins);
 
 // ...................................... Swap Currencies .........................................../
-router.get("/swap/update-coins", swapController.updateCoins);
-router.post("/swap/add-delete-coins", swapController.addAndDeleteCoin);
-router.post("/swap/standardize-coin", swapController.standardizeCoin);
-router.post("/swap/destandardize-coin", swapController.destandardizeCoin);
+router.get("/swap/update-coins", swapController.addCoins);
+router.post("/swap/destandardize-coin", swapController.deleteStandardCoin);
 router.get("/swap/get-standard-coin", swapController.getStandardCoin);
 router.post("/swap/update-standard-coin", swapController.updateStandardCoin);
+router.post(
+  "/swap/update-approval-status",
+  swapController.updateCoinApprovalStatus
+);
+router.post(
+  "/swap/merge-coins-to-mapped",
+  swapController.mergeCoinsToMappedPartners
+);
+router.post(
+  "/swap/update-notifications",
+  swapController.updateMappedPartnersNotifications
+);
 router.get("/swap/search-coins", swapController.searchCoins);
 
 // ...................................... Admin Routes .........................................../
